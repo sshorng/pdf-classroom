@@ -86,6 +86,13 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     mountClassroomAnnouncementSurface();
     const classroomDrawer = document.getElementById("classroomAnnouncementDrawer");
     const classroomDrawerMounted = Boolean(document.getElementById("classroomAnnouncementButton") && classroomDrawer && classroomDrawer.querySelector("[data-announcement-surface=classroom]") && !classroomDrawer.querySelector("[data-announcement-add]") && !classroomDrawer.querySelector(".announcement-card-actions"));
+    openAnnouncementForm();
+    const pinnedInput = document.querySelector("#modalContent .announcement-checkbox input");
+    const pinnedCopy = document.querySelector("#modalContent .announcement-checkbox span");
+    const pinnedInputRect = pinnedInput && pinnedInput.getBoundingClientRect();
+    const pinnedCopyRect = pinnedCopy && pinnedCopy.getBoundingClientRect();
+    const pinnedCheckboxLayout = Boolean(pinnedInputRect && pinnedCopyRect && pinnedInputRect.width <= 20 && pinnedInputRect.height <= 20 && pinnedCopyRect.left - pinnedInputRect.right <= 20);
+    closeModal(false);
 
     const deleted = await localRequest("deleteAnnouncement", { id: ids[2] });
     const deleteWorks = deleted.deleted === 1 && deleted.data.length === 2;
@@ -97,7 +104,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     state.demo = originalDemo;
     state.announcements = originalAnnouncements;
     renderAnnouncementSurfaces();
-    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, reorderWorks, managerCards, managerHasControls, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, deleteWorks });
+    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, reorderWorks, managerCards, managerHasControls, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
   })()`);
 
   const checks = JSON.parse(result);
@@ -110,6 +117,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
   assert(checks.studentIsReadOnly === true, "學生端公告仍可見管理控制");
   assert(checks.linkIsSafe === true, "公告連結未以安全的新分頁開啟");
   assert(checks.classroomDrawerMounted === true, "教師課堂公告抽屜未正確掛載或錯誤提供管理控制");
+  assert(checks.pinnedCheckboxLayout === true, "置頂 checkbox 版面跑版");
   assert(checks.deleteWorks === true, "公告刪除失敗");
   console.log("announcement-cdp=" + JSON.stringify(checks));
   socket.close();
