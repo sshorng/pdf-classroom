@@ -40,7 +40,24 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
 
   await call("Runtime.enable");
   await call("Page.enable");
-  await call("Page.navigate", { url: "http://127.0.0.1:4173/index.html?board=B-ecef9584f5874c" });
+  const appUrl = "http://127.0.0.1:4173/index.html";
+  const verticalHtml = "<style>@page{size:A4;margin:0}html,body{margin:0;width:210mm;height:297mm}body{font-family:serif}.vertical{writing-mode:vertical-rl;text-orientation:mixed;font-size:28px;line-height:1.6;height:220mm;margin:20mm 40mm}</style><div class=vertical>直排文字測試 Identity V 中文短句</div>";
+  await call("Page.navigate", { url: "data:text/html;charset=utf-8," + encodeURIComponent(verticalHtml) });
+  await sleep(800);
+  const printed = await call("Page.printToPDF", { printBackground: true, preferCSSPageSize: true });
+  if (!printed.data) throw new Error("無法建立 PDFium 直排字測試素材。");
+  const printedLatin1 = Buffer.from(printed.data, "base64").toString("latin1");
+  const verticalPdfBase64 = Buffer.from(printedLatin1.replace(/Identity-H/g, "Identity-V"), "latin1").toString("base64");
+  await call("Page.navigate", { url: appUrl });
+  await sleep(1200);
+
+  const boardId = await evaluate(`(async () => {
+    const boards = await localAll("boards");
+    const board = boards.find((item) => item && item.materials && item.materials.some((material) => material.pdfFileId));
+    return board && board.id;
+  })()`);
+  if (!boardId) throw new Error("找不到可供 PDFium 測試使用的本機教材版面。");
+  await call("Page.navigate", { url: appUrl + "?board=" + encodeURIComponent(boardId) });
   await sleep(1200);
 
   const result = await evaluate(`(async () => {
@@ -64,6 +81,21 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     window.loadStudentSubmissions = async function () {};
     const originalMaterialId = state.activeMaterialId;
     const originalPage = state.currentPage;
+    const originalMaterials = state.materials.slice();
+    const fixtureMaterialId = "M-pdfium-vertical-fixture";
+    const fixtureFileId = "L-pdfium-vertical-fixture";
+    const fixturePdfBase64 = ${JSON.stringify(verticalPdfBase64)};
+    const fixtureMaterial = { id: fixtureMaterialId, boardId: state.board.id, name: "PDFium 直排測試", description: "", pdfFileId: fixtureFileId, pdfFileName: "pdfium-vertical-test.pdf", pdfMime: "application/pdf", order: state.materials.length + 1, status: "啟用", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    await localPut("files", { id: fixtureFileId, name: fixtureMaterial.pdfFileName, mime: fixtureMaterial.pdfMime, base64: fixturePdfBase64, size: Math.floor(fixturePdfBase64.length * 0.75), boardId: state.board.id, materialId: fixtureMaterialId, cachedAt: new Date().toISOString() });
+    state.materials = state.materials.concat([fixtureMaterial]);
+    state.board.materials = state.materials;
+    await localPut("boards", state.board);
+    const restoreFixture = async () => {
+      state.materials = originalMaterials;
+      state.board.materials = originalMaterials;
+      await localPut("boards", state.board);
+      await localDelete("files", fixtureFileId);
+    };
     let targetMaterial = null;
     let targetPage = 0;
     const materialErrors = [];
@@ -85,6 +117,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
       if (targetPage) break;
     }
     if (!targetPage) {
+      await restoreFixture();
       window.loadClassroomSync = originalSync;
       window.loadStudentSubmissions = originalSubmissions;
       return JSON.stringify({ ready: false, reason: "測試教材中找不到直排文字頁", materials: state.materials.map((item) => item.name), materialErrors });
@@ -104,6 +137,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
       state.currentPage = originalPage;
       await renderPdfPage();
     }
+    await restoreFixture();
     window.loadClassroomSync = originalSync;
     window.loadStudentSubmissions = originalSubmissions;
     return JSON.stringify({ ready: true, material: targetMaterial && targetMaterial.name, page: targetPage, originalTargetPage, needsPdfium, renderedWithPdfium, canvasWidth: canvas && canvas.width, canvasHeight: canvas && canvas.height, sample: Array.from(sample || []) });

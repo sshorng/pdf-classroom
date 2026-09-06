@@ -33,8 +33,8 @@ const TABLES = {
   },
   ink: {
     name: "教師手寫",
-    headers: ["筆跡ID", "版面ID", "教材ID", "頁碼", "筆跡資料", "修改時間"],
-    keys: ["id", "boardId", "materialId", "page", "strokes", "updatedAt"]
+    headers: ["筆跡ID", "版面ID", "教材ID", "頁碼", "筆跡資料", "修改時間", "異動ID"],
+    keys: ["id", "boardId", "materialId", "page", "strokes", "updatedAt", "mutationId"]
   },
   classroomState: {
     name: "課堂狀態",
@@ -43,8 +43,8 @@ const TABLES = {
   },
   submissions: {
     name: "作答紀錄",
-    headers: ["作答ID", "版面ID", "教材ID", "問答區ID", "學生暱稱", "文字答案", "圖片檔案ID", "圖片檔名", "教師筆跡", "教師評語", "批改狀態", "裝置代碼", "建立時間", "修改時間"],
-    keys: ["id", "boardId", "materialId", "areaId", "nickname", "text", "imageFileIds", "imageFileNames", "teacherStrokes", "teacherComment", "status", "clientId", "createdAt", "updatedAt"]
+    headers: ["作答ID", "版面ID", "教材ID", "問答區ID", "學生暱稱", "文字答案", "圖片檔案ID", "圖片檔名", "教師筆跡", "教師評語", "批改狀態", "裝置代碼", "建立時間", "修改時間", "異動ID"],
+    keys: ["id", "boardId", "materialId", "areaId", "nickname", "text", "imageFileIds", "imageFileNames", "teacherStrokes", "teacherComment", "status", "clientId", "createdAt", "updatedAt", "mutationId"]
   },
   files: {
     name: "檔案索引",
@@ -74,7 +74,7 @@ const MAX_TEXT = {
 };
 
 const MAX_SHEET_JSON_CHARS = 45000;
-const TABLE_CACHE_SECONDS = 8;
+const TABLE_CACHE_SECONDS = 3;
 const TABLE_CACHE_MAX_CHARS = 90000;
 const TABLE_CACHE_PREFIX = "pdfw_table_v2_materials_";
 const DATABASE_READY_CACHE_KEY = "pdfw_database_ready_v3_materials";
@@ -84,6 +84,13 @@ const INK_DELTA_CACHE_PREFIX = "pdfw_ink_delta_v1_";
 const INK_DELTA_CACHE_SECONDS = 300;
 const CLASSROOM_PULSE_PREFIX = "pdfw_classroom_pulse_v1_";
 const CLASSROOM_PULSE_SECONDS = 30;
+const TABLE_CACHE_VERSION_PREFIX = "pdfw_table_version_v1_";
+const TABLE_CACHE_VERSION_SECONDS = 21600;
+const SUBMISSION_COUNT_CACHE_KEY_PREFIX = "pdfw_submission_counts_v1_";
+const SUBMISSION_COUNT_CACHE_SECONDS = 5;
+const MUTATION_RESULT_CACHE_PREFIX = "pdfw_mutation_result_v1_";
+const MUTATION_RESULT_CACHE_SECONDS = 21600;
+const MUTATION_RESULT_CACHE_MAX_CHARS = 90000;
 
 function getSpreadsheet_() {
   const id = PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
@@ -165,7 +172,11 @@ function getSheet_(key) {
 }
 
 function clearTableCache_(key) {
-  CacheService.getScriptCache().remove(TABLE_CACHE_PREFIX + key);
+  const cache = CacheService.getScriptCache();
+  cache.remove(TABLE_CACHE_PREFIX + key);
+  try {
+    cache.put(TABLE_CACHE_VERSION_PREFIX + key, now_() + "|" + Utilities.getUuid(), TABLE_CACHE_VERSION_SECONDS);
+  } catch (error) {}
 }
 
 function clearAllTableCaches_() {
@@ -176,7 +187,9 @@ function readTable_(key) {
   const table = TABLES[key];
   const cacheKey = TABLE_CACHE_PREFIX + key;
   const cache = CacheService.getScriptCache();
+  let versionAtStart = "0";
   try {
+    versionAtStart = String(cache.get(TABLE_CACHE_VERSION_PREFIX + key) || "0");
     const cached = cache.get(cacheKey);
     if (cached) return JSON.parse(cached);
   } catch (error) {
@@ -186,7 +199,9 @@ function readTable_(key) {
   const lastRow = sheet.getLastRow();
   const lastColumn = sheet.getLastColumn();
   if (lastRow < 2 || lastColumn < 1) {
-    cache.put(cacheKey, "[]", TABLE_CACHE_SECONDS);
+    try {
+      if (String(cache.get(TABLE_CACHE_VERSION_PREFIX + key) || "0") === versionAtStart) cache.put(cacheKey, "[]", TABLE_CACHE_SECONDS);
+    } catch (error) {}
     return [];
   }
   const values = sheet.getRange(1, 1, lastRow, lastColumn).getValues();
@@ -201,7 +216,7 @@ function readTable_(key) {
   });
   try {
     const serialized = JSON.stringify(rows);
-    if (serialized.length <= TABLE_CACHE_MAX_CHARS) cache.put(cacheKey, serialized, TABLE_CACHE_SECONDS);
+    if (serialized.length <= TABLE_CACHE_MAX_CHARS && String(cache.get(TABLE_CACHE_VERSION_PREFIX + key) || "0") === versionAtStart) cache.put(cacheKey, serialized, TABLE_CACHE_SECONDS);
   } catch (error) {
     // 大型資料表不寫入快取，避免超過 CacheService 單筆限制。
   }
@@ -392,6 +407,82 @@ function parseObject_(value, fallback) {
     return parsed && typeof parsed === "object" ? parsed : fallback;
   } catch (error) {
     return fallback;
+  }
+}
+
+function mutationResultCacheKey_(action, payload) {
+  const data = Object.assign({}, payload || {});
+  delete data.adminToken;
+  delete data.action;
+  const identity = data.mutationId || data.id || data.submissionId || data.materialId || data.boardId || data.clientBoardId;
+  if (!identity) return "";
+  if (data.mutationId) {
+    return MUTATION_RESULT_CACHE_PREFIX + String(action || "mutation").slice(0, 40) + "_" + String(data.mutationId).replace(/[^A-Za-z0-9_.-]/g, "_").slice(0, 100);
+  }
+  let raw = "";
+  try {
+    raw = JSON.stringify(data);
+  } catch (error) {
+    return "";
+  }
+  const digest = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, raw)).replace(/=+$/, "");
+  const safeIdentity = String(identity).replace(/[^A-Za-z0-9_.-]/g, "_").slice(0, 80);
+  return MUTATION_RESULT_CACHE_PREFIX + String(action || "mutation").slice(0, 40) + "_" + safeIdentity + "_" + digest;
+}
+
+function readMutationResult_(action, payload) {
+  const key = mutationResultCacheKey_(action, payload);
+  if (!key) return null;
+  try {
+    const value = CacheService.getScriptCache().get(key);
+    return value ? parseObject_(value, null) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function cacheMutationResult_(action, payload, result) {
+  const key = mutationResultCacheKey_(action, payload);
+  if (!key || !result) return;
+  try {
+    const value = JSON.stringify(result);
+    if (value.length <= MUTATION_RESULT_CACHE_MAX_CHARS) CacheService.getScriptCache().put(key, value, MUTATION_RESULT_CACHE_SECONDS);
+  } catch (error) {
+    // 冪等快取失敗時仍保留主要寫入結果。
+  }
+}
+
+function submissionCountCacheKey_(boardId) {
+  return SUBMISSION_COUNT_CACHE_KEY_PREFIX + String(boardId || "").replace(/[^A-Za-z0-9_.-]/g, "_").slice(0, 100);
+}
+
+function clearSubmissionCountCache_(boardId) {
+  if (!boardId) return;
+  try {
+    CacheService.getScriptCache().remove(submissionCountCacheKey_(boardId));
+  } catch (error) {}
+}
+
+function cachedSubmissionCounts_(boardId, materialId) {
+  try {
+    const value = CacheService.getScriptCache().get(submissionCountCacheKey_(boardId));
+    const all = value ? parseObject_(value, {}) : {};
+    const key = String(materialId || "*");
+    return Object.prototype.hasOwnProperty.call(all, key) ? all[key] : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function cacheSubmissionCounts_(boardId, materialId, counts) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const value = cache.get(submissionCountCacheKey_(boardId));
+    const all = value ? parseObject_(value, {}) : {};
+    all[String(materialId || "*")] = counts || {};
+    cache.put(submissionCountCacheKey_(boardId), JSON.stringify(all), SUBMISSION_COUNT_CACHE_SECONDS);
+  } catch (error) {
+    // 計數快取只是效能最佳化，失敗時直接讀取試算表。
   }
 }
 
@@ -674,11 +765,13 @@ function removeSubmissionsForAreas_(boardId, areaIds, materialId) {
     }
   });
   deleteRows_("files", function (file) { return String(file.boardId) === String(boardId) && targetSubmissions[String(file.submissionId)]; });
-  return deleteRows_("submissions", function (item) {
+  const deleted = deleteRows_("submissions", function (item) {
     if (String(item.boardId) !== String(boardId)) return false;
     if (targetAreas[String(item.areaId)]) return true;
     return Boolean(targetMaterialId) && String(item.materialId || legacyMaterialId_(boardId)) === targetMaterialId;
   });
+  clearSubmissionCountCache_(boardId);
+  return deleted;
 }
 
 function publicBoard_(board) {
@@ -905,6 +998,13 @@ function saveInk_(payload) {
   const previousValue = existing ? readJsonReference_(existing.strokes) : [];
   const previousStrokes = Array.isArray(previousValue) ? previousValue : [];
   const explicitReplace = payload && (payload.replaceInk === true || String(payload.replaceInk || "") === "1");
+  const mutationId = cleanText_(payload.mutationId, 120);
+  if (existing && mutationId && String(existing.mutationId || "") === mutationId) {
+    return { ok: true, annotation: payload.compact ? compactPublicInk_(existing) : publicInk_(existing) };
+  }
+  if (existing && String(existing.materialId || legacyMaterialId_(board.id)) === String(materialId) && Number(existing.page) === page && JSON.stringify(previousStrokes) === JSON.stringify(strokes)) {
+    return { ok: true, annotation: payload.compact ? compactPublicInk_(existing) : publicInk_(existing) };
+  }
   if (existing && !explicitReplace && previousStrokes.length > strokes.length) {
     return { ok: true, annotation: publicInk_(existing), preserved: true };
   }
@@ -915,7 +1015,7 @@ function saveInk_(payload) {
   const currentTime = Date.parse(updatedAt);
   if (Number.isFinite(previousTime) && Number.isFinite(currentTime) && currentTime <= previousTime) updatedAt = new Date(previousTime + 1).toISOString();
   const reference = storeJson_(strokes, "教師頁面手寫", board.id, id, materialId);
-  const item = { id: id, boardId: board.id, materialId: materialId, page: page, strokes: reference, updatedAt: updatedAt };
+  const item = { id: id, boardId: board.id, materialId: materialId, page: page, strokes: reference, updatedAt: updatedAt, mutationId: mutationId };
   if (existing) updateRow_("ink", id, item);
   else appendRow_("ink", item);
   if (appendOnly) writeInkDeltaRecord_(id, previousVersion, updatedAt, strokes.slice(previousStrokes.length));
@@ -978,6 +1078,8 @@ function touchClassroomPulseState_(item, boardId) {
 
 function submissionCountsForBoard_(boardId, materialId, board, areas) {
   const targetBoard = board || getBoard_(boardId, false);
+  const cached = cachedSubmissionCounts_(targetBoard.id, materialId);
+  if (cached !== null) return cached;
   const targetAreas = areas || areasForBoard_(targetBoard.id, targetBoard);
   const areaMap = {};
   targetAreas.forEach(function (area) { areaMap[String(area.id)] = area; });
@@ -988,6 +1090,7 @@ function submissionCountsForBoard_(boardId, materialId, board, areas) {
     if (!area || (materialId && String(area.materialId) !== String(materialId))) return;
     counts[String(item.areaId)] = (counts[String(item.areaId)] || 0) + 1;
   });
+  cacheSubmissionCounts_(targetBoard.id, materialId, counts);
   return counts;
 }
 
@@ -1186,9 +1289,13 @@ function createBoard_(payload) {
   requireManager_(payload);
   const name = cleanText_(payload.name, MAX_TEXT.name);
   if (!name) throw new Error("請填寫教材版面名稱。");
+  const clientBoardId = cleanText_(payload.clientBoardId, 80);
+  if (clientBoardId) {
+    const existing = readTable_("boards").find(function (item) { return String(item.id) === clientBoardId; });
+    if (existing) return { ok: true, board: publicBoard_(existing), materials: materialsForBoard_(existing.id, existing), areas: areasForBoard_(existing.id, existing), answerMasks: answerMasksForBoard_(existing.id, existing) };
+  }
   const now = now_();
-  let boardId = cleanText_(payload.clientBoardId, 80);
-  if (!boardId || readTable_("boards").some(function (item) { return String(item.id) === boardId; })) boardId = makeId_("B");
+  const boardId = clientBoardId || makeId_("B");
   const board = {
     id: boardId,
     name: name,
@@ -1252,6 +1359,7 @@ function saveAreas_(boardId, areas) {
       updatedAt: now
     });
   });
+  clearSubmissionCountCache_(board.id);
   touchClassroomPulseCatalog_(board);
 }
 
@@ -1305,7 +1413,11 @@ function createMaterial_(payload) {
   if (!payload.pdf || !payload.pdf.data) throw new Error("請選擇 PDF 教材。");
   materializeLegacyMaterial_(board);
   const id = cleanText_(payload.id, 100) || makeId_("M");
-  if (readTable_("materials").some(function (item) { return String(item.id) === id; })) throw new Error("教材 ID 已存在。");
+  const existing = readTable_("materials").find(function (item) { return String(item.id) === id; });
+  if (existing) {
+    if (String(existing.boardId) !== String(board.id)) throw new Error("教材 ID 已存在。");
+    return { ok: true, material: publicMaterial_(existing), board: publicBoard_(board), materials: materialsForBoard_(board.id, board), areas: areasForBoard_(board.id, board), answerMasks: answerMasksForBoard_(board.id, board) };
+  }
   const now = now_();
   const order = materialsForBoard_(board.id, board).length + 1;
   const fileName = safeFileName_(name + "_" + (payload.pdf.name || "講義.pdf"));
@@ -1484,6 +1596,8 @@ function saveSubmission_(payload) {
   if (!nickname) throw new Error("請先輸入暱稱。");
   const id = cleanText_(payload.id, 120) || makeId_("S");
   const existing = readTable_("submissions").find(function (item) { return String(item.id) === id; });
+  const mutationId = cleanText_(payload.mutationId, 120);
+  if (existing && mutationId && String(existing.mutationId || "") === mutationId) return { ok: true, submission: publicSubmission_(existing, false, materialId) };
   const imageIds = parseArray_(payload.keepImageFileIds).slice(0, 2);
   const imageNames = parseArray_(payload.keepImageFileNames).slice(0, 2);
   const rawImages = parseArray_(payload.images);
@@ -1510,11 +1624,13 @@ function saveSubmission_(payload) {
     status: "待批改",
     clientId: cleanText_(payload.clientId, 100),
     createdAt: existing ? existing.createdAt : now,
-    updatedAt: now
+    updatedAt: now,
+    mutationId: mutationId
   };
   if (!item.text && !imageIds.length) throw new Error("請輸入文字或上傳至少一張照片。");
   if (existing) updateRow_("submissions", id, item);
   else appendRow_("submissions", item);
+  clearSubmissionCountCache_(board.id);
   return { ok: true, submission: publicSubmission_(item, false, materialId) };
 }
 
@@ -1546,14 +1662,19 @@ function saveFeedback_(payload) {
   const item = rows.find(function (row) { return String(row.id) === String(payload.submissionId); });
   if (!item) throw new Error("找不到指定作答紀錄。");
   const feedback = payload.strokes || { photoIndex: 0, strokes: [] };
+  const comment = cleanText_(payload.comment, MAX_TEXT.comment);
+  if (String(item.teacherComment || "") === comment && String(item.status || "") === "已批改" && JSON.stringify(readJsonReference_(item.teacherStrokes)) === JSON.stringify(feedback)) {
+    return { ok: true, submissionId: item.id, feedback: feedback, updatedAt: item.updatedAt };
+  }
   const reference = storeJson_(feedback, "教師批改筆跡", item.boardId, item.id, item.materialId || legacyMaterialId_(item.boardId));
+  const updatedAt = now_();
   updateRow_("submissions", item.id, {
     teacherStrokes: reference,
-    teacherComment: cleanText_(payload.comment, MAX_TEXT.comment),
+    teacherComment: comment,
     status: "已批改",
-    updatedAt: now_()
+    updatedAt: updatedAt
   });
-  return { ok: true, submissionId: item.id, feedback: feedback, updatedAt: now_() };
+  return { ok: true, submissionId: item.id, feedback: feedback, updatedAt: updatedAt };
 }
 
 function deleteSubmission_(payload) {
@@ -1592,6 +1713,7 @@ function deleteSubmission_(payload) {
     return String(row.id) === submissionId;
   });
 
+  clearSubmissionCountCache_(item.boardId);
   return { ok: true, submissionId: submissionId, boardId: item.boardId, areaId: item.areaId, deleted: deleted };
 }
 
@@ -1635,6 +1757,16 @@ function withLock_(callback) {
   }
 }
 
+function isIdempotentAction_(action) {
+  return ["createBoard", "updateBoard", "archiveBoard", "deleteBoard", "createMaterial", "updateMaterial", "deleteMaterial", "saveInk", "saveClassroomState", "saveSubmission", "deleteSubmission", "saveFeedback"].indexOf(String(action || "")) > -1;
+}
+
+function canReadMutationResult_(action, payload) {
+  const protectedActions = ["createBoard", "updateBoard", "archiveBoard", "deleteBoard", "createMaterial", "updateMaterial", "deleteMaterial", "saveInk", "saveClassroomState", "deleteSubmission", "saveFeedback"];
+  if (protectedActions.indexOf(String(action || "")) < 0) return true;
+  return !getSetting_("AdminPassword") || isAdminToken_(payload && payload.adminToken);
+}
+
 function doGet(e) {
   try {
     ensureDatabase_();
@@ -1659,33 +1791,42 @@ function doPost(e) {
     ensureDatabase_();
     const payload = parsePayload_(e);
     const action = String((e && e.parameter && e.parameter.action) || payload.action || "");
-    let result;
-    if (action === "verifyAdmin") result = verifyAdmin_(payload);
-    else if (action === "listBoards") result = listBoards_(payload);
-    else if (action === "getBoard") result = getBoardData_(payload);
-    else if (action === "createBoard") result = withLock_(function () { return createBoard_(payload); });
-    else if (action === "updateBoard") result = withLock_(function () { return updateBoard_(payload); });
-    else if (action === "archiveBoard") result = withLock_(function () { return archiveBoard_(payload); });
-    else if (action === "deleteBoard") result = withLock_(function () { return deleteBoard_(payload); });
-    else if (action === "createMaterial") result = withLock_(function () { return createMaterial_(payload); });
-    else if (action === "updateMaterial") result = withLock_(function () { return updateMaterial_(payload); });
-    else if (action === "deleteMaterial") result = withLock_(function () { return deleteMaterial_(payload); });
-    else if (action === "listInk") result = listInk_(payload);
-    else if (action === "saveInk") result = withLock_(function () { return saveInk_(payload); });
-    else if (action === "classroomPulse") result = classroomPulse_(payload);
-    else if (action === "classroomSync") result = classroomSync_(payload);
-    else if (action === "saveClassroomState") result = withLock_(function () { return saveClassroomState_(payload); });
-    else if (action === "saveSubmission") result = withLock_(function () { return saveSubmission_(payload); });
-    else if (action === "deleteSubmission") result = withLock_(function () { return deleteSubmission_(payload); });
-    else if (action === "listSubmissions") result = listSubmissions_(payload);
-    else if (action === "saveFeedback") result = withLock_(function () { return saveFeedback_(payload); });
-    else if (action === "getFile") result = getFile_(payload);
-    else if (action === "sheetUrl") {
-      requireManager_(payload);
-      result = { ok: true, url: getSpreadsheet_().getUrl() };
-    } else {
-      throw new Error("未知的 API 動作：「" + action + "」。");
-    }
+    const process = function () {
+      if (isIdempotentAction_(action) && canReadMutationResult_(action, payload)) {
+        const cachedResult = readMutationResult_(action, payload);
+        if (cachedResult) return cachedResult;
+      }
+      let result;
+      if (action === "verifyAdmin") result = verifyAdmin_(payload);
+      else if (action === "listBoards") result = listBoards_(payload);
+      else if (action === "getBoard") result = getBoardData_(payload);
+      else if (action === "createBoard") result = createBoard_(payload);
+      else if (action === "updateBoard") result = updateBoard_(payload);
+      else if (action === "archiveBoard") result = archiveBoard_(payload);
+      else if (action === "deleteBoard") result = deleteBoard_(payload);
+      else if (action === "createMaterial") result = createMaterial_(payload);
+      else if (action === "updateMaterial") result = updateMaterial_(payload);
+      else if (action === "deleteMaterial") result = deleteMaterial_(payload);
+      else if (action === "listInk") result = listInk_(payload);
+      else if (action === "saveInk") result = saveInk_(payload);
+      else if (action === "classroomPulse") result = classroomPulse_(payload);
+      else if (action === "classroomSync") result = classroomSync_(payload);
+      else if (action === "saveClassroomState") result = saveClassroomState_(payload);
+      else if (action === "saveSubmission") result = saveSubmission_(payload);
+      else if (action === "deleteSubmission") result = deleteSubmission_(payload);
+      else if (action === "listSubmissions") result = listSubmissions_(payload);
+      else if (action === "saveFeedback") result = saveFeedback_(payload);
+      else if (action === "getFile") result = getFile_(payload);
+      else if (action === "sheetUrl") {
+        requireManager_(payload);
+        result = { ok: true, url: getSpreadsheet_().getUrl() };
+      } else {
+        throw new Error("未知的 API 動作：「" + action + "」。");
+      }
+      if (isIdempotentAction_(action)) cacheMutationResult_(action, payload, result);
+      return result;
+    };
+    const result = isIdempotentAction_(action) ? withLock_(process) : process();
     return jsonOut_(result);
   } catch (error) {
     return jsonOut_({ ok: false, error: String(error.message || error) });
