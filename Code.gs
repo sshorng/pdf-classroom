@@ -11,6 +11,11 @@ const TABLES = {
     headers: ["設定項", "設定值"],
     keys: ["key", "value"]
   },
+  announcements: {
+    name: "公告連結",
+    headers: ["公告ID", "標題", "連結", "置頂", "排序", "狀態", "建立時間", "修改時間"],
+    keys: ["id", "title", "url", "pinned", "order", "status", "createdAt", "updatedAt"]
+  },
   boards: {
     name: "教材版面",
     headers: ["版面ID", "版面名稱", "版面說明", "PDF檔案ID", "PDF檔名", "PDF類型", "狀態", "建立時間", "修改時間"],
@@ -66,6 +71,7 @@ const MAX_TEXT = {
   name: 80,
   description: 300,
   title: 100,
+  url: 2048,
   prompt: 500,
   nickname: 40,
   answer: 5000,
@@ -956,6 +962,122 @@ function publicSubmission_(item, includePrivate, fallbackMaterialId) {
   return output;
 }
 
+function announcementPinned_(value) {
+  return value === true || String(value || "").toLowerCase() === "true" || String(value || "") === "1" || String(value || "") === "是";
+}
+
+function normalizeAnnouncementUrl_(value) {
+  const raw = String(value == null ? "" : value).trim();
+  if (raw.length > MAX_TEXT.url) throw new Error("公告連結不可超過 2048 個字元。");
+  const url = cleanText_(raw, MAX_TEXT.url);
+  if (!/^https?:\/\/[^\s/]+(?:[/?#][^\s]*)?$/i.test(url)) throw new Error("公告連結只接受有效的 http 或 https 網址。");
+  return url;
+}
+
+function normalizeAnnouncementOrder_(value, fallback) {
+  const candidate = Number(value);
+  const defaultValue = Number(fallback) || 1;
+  return Math.max(1, Math.min(1000, Math.floor(Number.isFinite(candidate) && candidate > 0 ? candidate : defaultValue)));
+}
+
+function publicAnnouncement_(item) {
+  return {
+    id: String(item.id || ""),
+    title: String(item.title || ""),
+    url: String(item.url || ""),
+    pinned: announcementPinned_(item.pinned),
+    order: normalizeAnnouncementOrder_(item.order, 1),
+    status: String(item.status || "啟用"),
+    createdAt: String(item.createdAt || ""),
+    updatedAt: String(item.updatedAt || "")
+  };
+}
+
+function announcementsForPublic_() {
+  return readTable_("announcements")
+    .filter(function (item) { return String(item.status || "啟用") === "啟用"; })
+    .map(publicAnnouncement_)
+    .sort(function (a, b) {
+      return Number(b.pinned) - Number(a.pinned) || a.order - b.order || String(b.updatedAt).localeCompare(String(a.updatedAt)) || String(a.id).localeCompare(String(b.id));
+    });
+}
+
+function announcementResult_(announcement) {
+  return { ok: true, announcement: publicAnnouncement_(announcement), data: announcementsForPublic_(), serverTime: now_() };
+}
+
+function listAnnouncements_(payload) {
+  return { ok: true, data: announcementsForPublic_(), serverTime: now_() };
+}
+
+function createAnnouncement_(payload) {
+  requireManager_(payload || {});
+  const title = cleanText_(payload.title, MAX_TEXT.title);
+  if (!title) throw new Error("請填寫公告標題。");
+  const url = normalizeAnnouncementUrl_(payload.url);
+  const id = cleanText_(payload.id, 120) || makeId_("AN");
+  const existing = readTable_("announcements").find(function (item) { return String(item.id) === id; });
+  if (existing) return announcementResult_(existing);
+  const activeRows = readTable_("announcements").filter(function (item) { return String(item.status || "啟用") === "啟用"; });
+  const now = now_();
+  const item = {
+    id: id,
+    title: title,
+    url: url,
+    pinned: announcementPinned_(payload.pinned),
+    order: normalizeAnnouncementOrder_(payload.order, activeRows.length + 1),
+    status: "啟用",
+    createdAt: now,
+    updatedAt: now
+  };
+  appendRow_("announcements", item);
+  return announcementResult_(item);
+}
+
+function updateAnnouncement_(payload) {
+  requireManager_(payload || {});
+  const id = cleanText_(payload.id, 120);
+  if (!id) throw new Error("缺少公告 ID。");
+  const existing = readTable_("announcements").find(function (item) { return String(item.id) === id; });
+  if (!existing) throw new Error("找不到指定公告。");
+  const fields = { updatedAt: now_() };
+  if (payload.title !== undefined) {
+    fields.title = cleanText_(payload.title, MAX_TEXT.title);
+    if (!fields.title) throw new Error("公告標題不可為空白。");
+  }
+  if (payload.url !== undefined) fields.url = normalizeAnnouncementUrl_(payload.url);
+  if (payload.pinned !== undefined) fields.pinned = announcementPinned_(payload.pinned);
+  if (payload.order !== undefined) fields.order = normalizeAnnouncementOrder_(payload.order, existing.order);
+  updateRow_("announcements", id, fields);
+  return announcementResult_(Object.assign({}, existing, fields));
+}
+
+function reorderAnnouncements_(payload) {
+  requireManager_(payload || {});
+  const rows = readTable_("announcements").filter(function (item) { return String(item.status || "啟用") === "啟用"; });
+  const items = parseArray_(payload.items);
+  if (items.length !== rows.length) throw new Error("公告排序資料不完整。");
+  const rowMap = {};
+  rows.forEach(function (item) { rowMap[String(item.id)] = item; });
+  const seen = {};
+  const updatedAt = now_();
+  items.forEach(function (item, index) {
+    const id = cleanText_(item && item.id, 120);
+    if (!id || !rowMap[id] || seen[id]) throw new Error("公告排序資料不正確。");
+    seen[id] = true;
+    updateRow_("announcements", id, { order: index + 1, updatedAt: updatedAt });
+  });
+  return { ok: true, data: announcementsForPublic_(), serverTime: now_() };
+}
+
+function deleteAnnouncement_(payload) {
+  requireManager_(payload || {});
+  const id = cleanText_(payload.id, 120);
+  if (!id) throw new Error("缺少公告 ID。");
+  const deleted = deleteRows_("announcements", function (item) { return String(item.id) === id; });
+  return { ok: true, id: id, deleted: deleted, data: announcementsForPublic_(), serverTime: now_() };
+}
+
 function listBoards_(payload) {
   requireManager_(payload || {});
   return {
@@ -1758,11 +1880,11 @@ function withLock_(callback) {
 }
 
 function isIdempotentAction_(action) {
-  return ["createBoard", "updateBoard", "archiveBoard", "deleteBoard", "createMaterial", "updateMaterial", "deleteMaterial", "saveInk", "saveClassroomState", "saveSubmission", "deleteSubmission", "saveFeedback"].indexOf(String(action || "")) > -1;
+  return ["createBoard", "updateBoard", "archiveBoard", "deleteBoard", "createMaterial", "updateMaterial", "deleteMaterial", "createAnnouncement", "updateAnnouncement", "reorderAnnouncements", "deleteAnnouncement", "saveInk", "saveClassroomState", "saveSubmission", "deleteSubmission", "saveFeedback"].indexOf(String(action || "")) > -1;
 }
 
 function canReadMutationResult_(action, payload) {
-  const protectedActions = ["createBoard", "updateBoard", "archiveBoard", "deleteBoard", "createMaterial", "updateMaterial", "deleteMaterial", "saveInk", "saveClassroomState", "deleteSubmission", "saveFeedback"];
+  const protectedActions = ["createBoard", "updateBoard", "archiveBoard", "deleteBoard", "createMaterial", "updateMaterial", "deleteMaterial", "createAnnouncement", "updateAnnouncement", "reorderAnnouncements", "deleteAnnouncement", "saveInk", "saveClassroomState", "deleteSubmission", "saveFeedback"];
   if (protectedActions.indexOf(String(action || "")) < 0) return true;
   return !getSetting_("AdminPassword") || isAdminToken_(payload && payload.adminToken);
 }
@@ -1773,6 +1895,7 @@ function doGet(e) {
     const parameter = e && e.parameter ? e.parameter : {};
     const action = String(parameter.action || "ping");
     if (action === "settings") return jsonOut_({ ok: true, settings: settingsInfo_() });
+    if (action === "listAnnouncements") return jsonOut_(listAnnouncements_(parameter));
     if (action === "listBoards") return jsonOut_(listBoards_(parameter));
     if (action === "getBoard") return jsonOut_(getBoardData_(parameter));
     if (action === "classroomPulse") return jsonOut_(classroomPulse_(parameter));
@@ -1798,6 +1921,11 @@ function doPost(e) {
       }
       let result;
       if (action === "verifyAdmin") result = verifyAdmin_(payload);
+      else if (action === "listAnnouncements") result = listAnnouncements_(payload);
+      else if (action === "createAnnouncement") result = createAnnouncement_(payload);
+      else if (action === "updateAnnouncement") result = updateAnnouncement_(payload);
+      else if (action === "reorderAnnouncements") result = reorderAnnouncements_(payload);
+      else if (action === "deleteAnnouncement") result = deleteAnnouncement_(payload);
       else if (action === "listBoards") result = listBoards_(payload);
       else if (action === "getBoard") result = getBoardData_(payload);
       else if (action === "createBoard") result = createBoard_(payload);

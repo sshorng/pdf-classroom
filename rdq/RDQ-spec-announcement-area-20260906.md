@@ -3,7 +3,7 @@ rdq_version: 1
 task: 新增學生常用連結公告區
 domain: dev
 date: 2026-09-06
-status: draft
+status: confirmed
 telemetry:
   mode: lite
   rounds: 1

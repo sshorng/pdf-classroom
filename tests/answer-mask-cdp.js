@@ -86,7 +86,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
      hideAllAnswerMasks();
      const studentRemainsCovered = state.revealedAnswerMaskIds.size === 0 && document.querySelectorAll(".answer-mask:not(.is-revealed)").length === 2;
      goView("review", state.board.id);
-     const reviewReady = await waitFor(() => state.view === "review" && document.getElementById("teacherPdfToolbar"), 15000);
+      const reviewReady = await waitFor(() => state.view === "review" && state.pdf && document.getElementById("teacherPdfToolbar") && document.getElementById("answerMaskLayer"), 15000);
      if (!reviewReady) return JSON.stringify({ ready: false, reason: "教師課堂頁面未準備完成" });
      state.answerMasks = normalizeAnswerMasks(masks, state.board.id);
      state.revealedAnswerMaskIds = new Set();

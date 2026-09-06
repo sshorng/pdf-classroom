@@ -57,7 +57,9 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     const hasBinding = typeof window.bindClassroomPullToRefresh === "function";
     const hasRefresh = typeof window.refreshClassroomView === "function";
     const hasClassroomPolling = typeof window.pollClassroomView === "function";
-    if (!scroll || !stage || !inkCanvas || !indicator) throw new Error("課堂下拉重整測試元件不存在。");
+    const announcementDrawer = document.getElementById("classroomAnnouncementDrawer");
+    const classroomAnnouncementReadOnly = Boolean(document.getElementById("classroomAnnouncementButton") && announcementDrawer && announcementDrawer.querySelector("[data-announcement-surface=classroom]") && !announcementDrawer.querySelector("[data-announcement-add]") && !announcementDrawer.querySelector(".announcement-card-actions"));
+    if (!scroll || !stage || !inkCanvas || !indicator || !classroomAnnouncementReadOnly) throw new Error("課堂下拉重整或公告抽屜測試元件不存在。");
 
     if (state.pollTimer) {
       window.clearInterval(state.pollTimer);
@@ -206,7 +208,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     window.loadReviewSubmissions = originalReviewSubmissions;
     if (originalClassroomSubmissions) window.loadClassroomSubmissions = originalClassroomSubmissions;
     else delete window.loadClassroomSubmissions;
-    return JSON.stringify({ hasBinding, hasRefresh, hasClassroomPolling, topPullTriggeredOnce, nonTopPullIgnored, stylusPullIgnored, activeStylusPullIgnored, localInkPreserved, successIndicatorReset, failureIndicatorReset, teacherPollingSync, teacherPollingSubmissions, teacherPollingUsesPulse, singleSyncFlight });
+     return JSON.stringify({ hasBinding, hasRefresh, hasClassroomPolling, classroomAnnouncementReadOnly, topPullTriggeredOnce, nonTopPullIgnored, stylusPullIgnored, activeStylusPullIgnored, localInkPreserved, successIndicatorReset, failureIndicatorReset, teacherPollingSync, teacherPollingSubmissions, teacherPollingUsesPulse, singleSyncFlight });
   })()`);
 
   const checks = JSON.parse(result);

@@ -183,6 +183,45 @@
     .section-heading h2 { margin-bottom: 0; font-size: 20px; }
     .section-heading p { margin-bottom: 0; color: var(--muted); font-size: 13px; }
     .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .announcement-surface { margin: 30px 0 34px; padding: 22px; background: linear-gradient(135deg, #fffdf8 0%, #eef5ef 100%); border: 1px solid #dce7df; border-radius: 21px; box-shadow: var(--shadow-soft); }
+    .announcement-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
+    .announcement-heading .eyebrow { margin-bottom: 5px; }
+    .announcement-heading h2 { margin-bottom: 3px; font-size: 21px; }
+    .announcement-heading p:last-child { margin-bottom: 0; color: var(--muted); font-size: 12px; }
+    .announcement-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 11px; }
+    .announcement-card { position: relative; display: flex; min-height: 142px; flex-direction: column; padding: 15px; background: rgba(255,255,255,.86); border: 1px solid #dfe5dd; border-radius: 15px; box-shadow: 0 6px 15px rgba(44, 52, 47, .06); }
+    .announcement-card.is-pinned { background: #fffaf0; border-color: #e7d4ad; }
+    .announcement-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
+    .announcement-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; color: var(--teal-dark); background: var(--teal-soft); border-radius: 999px; font-size: 11px; font-weight: 800; }
+    .announcement-card.is-pinned .announcement-tag { color: #805d31; background: #f5e3ba; }
+    .announcement-time { color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .announcement-link { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; color: var(--teal-dark); text-decoration: none; }
+    .announcement-link:hover .announcement-open { color: var(--accent-dark); }
+    .announcement-link strong { overflow: hidden; font-size: 16px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .announcement-url { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .announcement-open { margin-top: auto; color: var(--accent-dark); font-size: 12px; font-weight: 800; }
+    .announcement-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(225, 222, 212, .8); }
+    .announcement-card-actions .area-action-button { width: 29px; height: 29px; }
+    .announcement-empty { display: grid; gap: 2px; padding: 18px; color: var(--muted); background: rgba(255,255,255,.62); border: 1px dashed #c9d4ca; border-radius: 13px; font-size: 12px; }
+    .announcement-empty strong { color: var(--teal-dark); font-size: 14px; }
+    .announcement-empty.is-error { color: #805d31; background: #fff5dd; border-color: #ead4a5; }
+    .announcement-checkbox { display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; background: #f7f5ef; border: 1px solid var(--line); border-radius: 11px; cursor: pointer; }
+    .announcement-checkbox input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--teal); }
+    .announcement-checkbox span { display: grid; gap: 1px; }
+    .announcement-checkbox strong { color: var(--teal-dark); font-size: 13px; }
+    .announcement-checkbox small { color: var(--muted); font-size: 11px; }
+    .announcement-surface-compact { margin: 0 0 17px; padding: 15px; border-radius: 16px; }
+    .announcement-surface-compact .announcement-heading { align-items: flex-start; margin-bottom: 12px; }
+    .announcement-surface-compact .announcement-heading h2 { font-size: 17px; }
+    .announcement-surface-compact .announcement-list { grid-template-columns: 1fr; }
+    .announcement-surface-compact .announcement-card { min-height: 112px; padding: 12px; }
+    .announcement-surface-compact .announcement-link strong { font-size: 14px; }
+    .announcement-drawer { position: fixed; top: 68px; right: 14px; z-index: 80; width: min(520px, calc(100vw - 28px)); max-height: calc(100vh - 84px); overflow: auto; padding: 14px; background: rgba(255,253,248,.97); border: 1px solid rgba(225,222,212,.95); border-radius: 19px; box-shadow: 0 20px 60px rgba(23,35,30,.24); opacity: 0; pointer-events: none; transform: translateY(-10px); transition: opacity .18s ease, transform .18s ease; }
+    .announcement-drawer.is-open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .announcement-drawer-close { position: absolute; top: 13px; right: 13px; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px; color: var(--muted); background: rgba(255,255,255,.82); border: 1px solid var(--line); border-radius: 9px; font-size: 20px; }
+    .announcement-drawer-close:hover { color: var(--danger); border-color: #e2bbb4; }
+    .announcement-drawer .announcement-surface { margin: 0; padding: 6px 0 0; background: transparent; border: 0; box-shadow: none; }
+    .announcement-drawer .announcement-heading { padding-right: 43px; }
     .board-card {
       display: flex;
       flex-direction: column;
@@ -536,11 +575,16 @@
       .dashboard-hero { padding: 21px 17px; }
       .button { min-height: 44px; padding: 9px 12px; }
       .board-grid { grid-template-columns: 1fr; }
+      .announcement-surface { padding: 17px; }
+      .announcement-heading { align-items: flex-start; flex-direction: column; }
+      .announcement-heading > .button { align-self: flex-start; }
+      .announcement-list { grid-template-columns: 1fr; }
       .workspace-head, .workspace-sidebar { padding: 15px; }
       .toolbar-button { min-width: 44px; min-height: 44px; }
       .modal-card { padding: 21px 17px; }
       .modal-actions .button { flex: 1; }
       .photo-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .announcement-drawer { top: 62px; right: 8px; width: calc(100vw - 16px); max-height: calc(100vh - 74px); padding: 10px; }
     }
     @media (pointer: coarse) {
       .toolbar-button, .button, .photo-tab { min-height: 44px; }
@@ -642,6 +686,9 @@
       boardId: "",
       board: null,
       boards: [],
+      announcements: [],
+      announcementLoading: false,
+      announcementError: "",
       areas: [],
       answerMasks: [],
       pdf: null,
@@ -729,6 +776,7 @@
     let pdfRenderQueue = Promise.resolve();
     let activePdfRenderTask = null;
     let routeLoadGeneration = 0;
+    let announcementRequestSequence = 0;
 
     function pdfDocumentOptions(bytes) {
       return {
@@ -920,6 +968,49 @@
           status: String(mask && mask.status || "啟用")
         });
       }).filter(function (mask) { return mask.status === "啟用"; }).sort(compareAnswerMasksByPosition);
+    }
+
+    function announcementIsPinned(value) {
+      return value === true || String(value || "").toLowerCase() === "true" || String(value || "") === "1" || String(value || "") === "是";
+    }
+
+    function normalizeAnnouncementUrl(value) {
+      const url = String(value == null ? "" : value).trim();
+      if (url.length > 2048) throw new Error("公告連結不可超過 2048 個字元。");
+      if (!/^https?:\/\//i.test(url)) throw new Error("公告連結只接受 http 或 https 網址。");
+      try {
+        const parsed = new URL(url);
+        if (!parsed.hostname || !/^https?:$/.test(parsed.protocol)) throw new Error("invalid-url");
+      } catch (error) {
+        throw new Error("請輸入有效的 http 或 https 網址。");
+      }
+      return url.slice(0, 2048);
+    }
+
+    function normalizeAnnouncements(rows) {
+      return (Array.isArray(rows) ? rows : []).map(function (item, index) {
+        return Object.assign({}, item, {
+          id: String(item && item.id || ""),
+          title: String(item && item.title || "").trim().slice(0, 100),
+          url: String(item && item.url || "").trim().slice(0, 2048),
+          pinned: announcementIsPinned(item && item.pinned),
+          order: Math.max(1, Math.floor(Number(item && item.order) || index + 1)),
+          status: String(item && item.status || "啟用"),
+          createdAt: String(item && item.createdAt || ""),
+          updatedAt: String(item && item.updatedAt || "")
+        });
+      }).filter(function (item) { return item.id && item.title && item.url && item.status === "啟用"; }).sort(function (a, b) {
+        return Number(b.pinned) - Number(a.pinned) || a.order - b.order || String(b.updatedAt).localeCompare(String(a.updatedAt)) || a.id.localeCompare(b.id);
+      });
+    }
+
+    function shortAnnouncementUrl(value) {
+      try {
+        const parsed = new URL(value);
+        return parsed.hostname + (parsed.pathname && parsed.pathname !== "/" ? parsed.pathname : "") + (parsed.search || "");
+      } catch (error) {
+        return String(value || "");
+      }
     }
 
     function activeMaterial() {
@@ -1306,10 +1397,12 @@
           for (const board of result.data || []) await cacheBoardLocally(board);
           await pruneStaleLocalBoards(result.data || []);
           renderBoardCards();
+          await loadAnnouncements();
         } else if (state.view === "student" && state.boardId) {
           await loadBoardContext(state.boardId);
           await loadStudentSubmissions();
           await loadClassroomSync();
+          await loadAnnouncements();
           renderStudentAreaList();
           renderZones();
         } else if (state.view === "review" && state.boardId) {
@@ -1334,6 +1427,205 @@
       renderReviewAreaList();
       renderZones();
       renderTeacherInk();
+      await loadAnnouncements();
+    }
+
+    function announcementSurfaceHtml(surface, canManage, compact) {
+      const title = surface === "student" ? "課堂公告" : "公告與常用連結";
+      const description = surface === "student" ? "教師整理的課堂入口，點擊後會在新分頁開啟。" : "把學生常用的入口集中在這裡，少一點尋找，多一點專心。";
+      const manageButton = canManage ? "<button class=\"button small primary\" data-announcement-add type=\"button\">＋ 新增公告</button>" : "";
+      return "<section class=\"announcement-surface" + (compact ? " announcement-surface-compact" : "") + "\" data-announcement-surface=\"" + surface + "\"><div class=\"announcement-heading\"><div><p class=\"eyebrow\">CLASSROOM LINKS</p><h2>" + title + "</h2><p>" + description + "</p></div>" + manageButton + "</div><div class=\"announcement-list\" id=\"announcementList-" + surface + "\"><div class=\"inline-message\">正在讀取公告……</div></div></section>";
+    }
+
+    function renderAnnouncementList(surface) {
+      const root = document.querySelector("[data-announcement-surface=\"" + surface + "\"]");
+      const list = document.getElementById("announcementList-" + surface);
+      if (!root || !list) return;
+      if (state.announcementLoading) {
+        list.innerHTML = "<div class=\"inline-message\">正在讀取公告……</div>";
+        return;
+      }
+      if (!state.announcements.length) {
+        list.innerHTML = "<div class=\"announcement-empty\"><strong>目前還沒有公告連結</strong><span>教師可以在這裡整理學生常用的學習入口。</span></div>";
+        return;
+      }
+      const canManage = Boolean(root.querySelector("[data-announcement-add]"));
+      list.innerHTML = state.announcements.map(function (announcement, index) {
+        const previous = state.announcements[index - 1];
+        const next = state.announcements[index + 1];
+        const canMoveUp = canManage && previous && announcementIsPinned(previous) === announcementIsPinned(announcement);
+        const canMoveDown = canManage && next && announcementIsPinned(next) === announcementIsPinned(announcement);
+        const controls = canManage ? "<div class=\"announcement-card-actions\"><button class=\"area-action-button\" data-announcement-up=\"" + escapeHtml(announcement.id) + "\" type=\"button\" title=\"上移\" aria-label=\"上移\"" + (canMoveUp ? "" : " disabled") + ">↑</button><button class=\"area-action-button\" data-announcement-down=\"" + escapeHtml(announcement.id) + "\" type=\"button\" title=\"下移\" aria-label=\"下移\"" + (canMoveDown ? "" : " disabled") + ">↓</button><button class=\"area-action-button\" data-announcement-edit=\"" + escapeHtml(announcement.id) + "\" type=\"button\" title=\"編輯\" aria-label=\"編輯\">✎</button><button class=\"area-action-button danger\" data-announcement-delete=\"" + escapeHtml(announcement.id) + "\" type=\"button\" title=\"刪除\" aria-label=\"刪除\">×</button></div>" : "";
+        return "<article class=\"announcement-card" + (announcement.pinned ? " is-pinned" : "") + "\"><div class=\"announcement-card-top\"><span class=\"announcement-tag\">" + (announcement.pinned ? "置頂" : "常用連結") + "</span><span class=\"announcement-time\">" + escapeHtml(formatTime(announcement.updatedAt)) + "</span></div><a class=\"announcement-link\" href=\"" + escapeHtml(announcement.url) + "\" target=\"_blank\" rel=\"noopener noreferrer\"><strong>" + escapeHtml(announcement.title) + "</strong><span class=\"announcement-url\">" + escapeHtml(shortAnnouncementUrl(announcement.url)) + "</span><span class=\"announcement-open\">開啟連結 ↗</span></a>" + controls + "</article>";
+      }).join("");
+    }
+
+    function bindAnnouncementSurface(surface) {
+      const root = document.querySelector("[data-announcement-surface=\"" + surface + "\"]");
+      if (!root) return;
+      const addButton = root.querySelector("[data-announcement-add]");
+      if (addButton && addButton.dataset.bound !== "1") {
+        addButton.dataset.bound = "1";
+        addButton.addEventListener("click", function () { openAnnouncementForm(); });
+      }
+      root.querySelectorAll("[data-announcement-edit]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          const announcement = state.announcements.find(function (item) { return String(item.id) === String(button.dataset.announcementEdit); });
+          if (announcement) openAnnouncementForm(announcement);
+        });
+      });
+      root.querySelectorAll("[data-announcement-delete]").forEach(function (button) {
+        button.addEventListener("click", function () { deleteAnnouncementById(button.dataset.announcementDelete); });
+      });
+      root.querySelectorAll("[data-announcement-up]").forEach(function (button) {
+        button.addEventListener("click", function () { if (!button.disabled) moveAnnouncement(button.dataset.announcementUp, -1); });
+      });
+      root.querySelectorAll("[data-announcement-down]").forEach(function (button) {
+        button.addEventListener("click", function () { if (!button.disabled) moveAnnouncement(button.dataset.announcementDown, 1); });
+      });
+    }
+
+    function renderAnnouncementSurfaces() {
+      document.querySelectorAll("[data-announcement-surface]").forEach(function (root) {
+        renderAnnouncementList(root.dataset.announcementSurface);
+        bindAnnouncementSurface(root.dataset.announcementSurface);
+      });
+    }
+
+    function removeFloatingAnnouncementSurfaces() {
+      document.querySelectorAll("[data-announcement-floating]").forEach(function (element) { element.remove(); });
+    }
+
+    function mountClassroomAnnouncementSurface() {
+      const toolbar = document.getElementById("teacherPdfToolbar");
+      if (!toolbar || document.getElementById("classroomAnnouncementButton")) return;
+      const button = document.createElement("button");
+      button.id = "classroomAnnouncementButton";
+      button.className = "toolbar-button classroom-announcement-button";
+      button.type = "button";
+      button.textContent = "公告";
+      button.setAttribute("aria-expanded", "false");
+      button.setAttribute("aria-controls", "classroomAnnouncementDrawer");
+      toolbar.appendChild(button);
+      const drawer = document.createElement("aside");
+      drawer.id = "classroomAnnouncementDrawer";
+      drawer.className = "announcement-drawer";
+      drawer.dataset.announcementFloating = "1";
+      drawer.setAttribute("aria-hidden", "true");
+      drawer.innerHTML = "<button class=\"announcement-drawer-close\" id=\"classroomAnnouncementClose\" type=\"button\" aria-label=\"關閉公告\">×</button>" + announcementSurfaceHtml("classroom", false, true);
+      document.body.appendChild(drawer);
+      const close = function () {
+        drawer.classList.remove("is-open");
+        drawer.setAttribute("aria-hidden", "true");
+        button.setAttribute("aria-expanded", "false");
+      };
+      button.addEventListener("click", function () {
+        const open = drawer.classList.toggle("is-open");
+        drawer.setAttribute("aria-hidden", open ? "false" : "true");
+        button.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      document.getElementById("classroomAnnouncementClose").addEventListener("click", close);
+      renderAnnouncementSurfaces();
+    }
+
+    function applyAnnouncementResult(result) {
+      if (result && Array.isArray(result.data)) state.announcements = normalizeAnnouncements(result.data);
+      else if (result && result.announcement) {
+        const rows = state.announcements.filter(function (item) { return String(item.id) !== String(result.announcement.id); });
+        rows.push(result.announcement);
+        state.announcements = normalizeAnnouncements(rows);
+      }
+      renderAnnouncementSurfaces();
+    }
+
+    async function loadAnnouncements() {
+      const requestId = ++announcementRequestSequence;
+      state.announcementError = "";
+      state.announcementLoading = true;
+      renderAnnouncementSurfaces();
+      try {
+        const result = state.demo ? await localRequest("listAnnouncements", {}) : await gasGet("listAnnouncements", {});
+        if (requestId !== announcementRequestSequence) return state.announcements;
+        state.announcements = normalizeAnnouncements(result.data || []);
+        return state.announcements;
+      } catch (error) {
+        if (requestId !== announcementRequestSequence) return state.announcements;
+        state.announcementError = error.message || "公告暫時無法讀取。";
+        return state.announcements;
+      } finally {
+        if (requestId === announcementRequestSequence) {
+          state.announcementLoading = false;
+          renderAnnouncementSurfaces();
+          document.querySelectorAll("[data-announcement-surface]").forEach(function (root) {
+            if (state.announcementError && !state.announcements.length) {
+              const list = root.querySelector(".announcement-list");
+              if (list) list.innerHTML = "<div class=\"announcement-empty is-error\"><strong>公告暫時無法讀取</strong><span>請確認連線後重新整理。</span></div>";
+            }
+          });
+          state.announcementError = "";
+        }
+      }
+    }
+
+    async function announcementApi(action, payload) {
+      const result = state.demo ? await localRequest(action, payload || {}) : await managerApi(action, payload || {});
+      applyAnnouncementResult(result);
+      return result;
+    }
+
+    function openAnnouncementForm(announcement) {
+      const current = announcement || {};
+      const checked = current.pinned ? " checked" : "";
+      openFormModal(current.id ? "編輯公告連結" : "新增公告連結", "<form><div class=\"field\"><label for=\"announcementTitleField\">公告標題</label><input id=\"announcementTitleField\" name=\"title\" maxlength=\"100\" required value=\"" + escapeHtml(current.title || "") + "\" placeholder=\"例如：線上字典、學習影片、作業繳交區\"></div><div class=\"field\"><label for=\"announcementUrlField\">連結網址</label><input id=\"announcementUrlField\" name=\"url\" type=\"url\" maxlength=\"2048\" required value=\"" + escapeHtml(current.url || "") + "\" placeholder=\"https://example.com\"><p class=\"helper\">只接受以 http:// 或 https:// 開頭的網址，開啟時會另開分頁。</p></div><label class=\"announcement-checkbox\"><input name=\"pinned\" type=\"checkbox\"" + checked + "><span><strong>置頂這則公告</strong><small>置頂項目會固定排在一般連結前面。</small></span></label></form>", current.id ? "儲存修改" : "新增公告", async function (formData) {
+        const title = String(formData.get("title") || "").trim();
+        if (!title) throw new Error("請填寫公告標題。");
+        if (title.length > 100) throw new Error("公告標題不可超過 100 個字元。");
+        const url = normalizeAnnouncementUrl(formData.get("url"));
+        const payload = { title: title, url: url, pinned: formData.get("pinned") === "on" };
+        if (current.id) {
+          payload.id = current.id;
+          await announcementApi("updateAnnouncement", payload);
+          showToast("公告已更新。", "success");
+        } else {
+          payload.id = createId("AN");
+          payload.order = state.announcements.length + 1;
+          await announcementApi("createAnnouncement", payload);
+          showToast("公告已新增。", "success");
+        }
+        return true;
+      });
+    }
+
+    async function deleteAnnouncementById(id) {
+      const announcement = state.announcements.find(function (item) { return String(item.id) === String(id); });
+      if (!announcement) return;
+      const ok = await showModal("刪除公告連結", "確定要刪除「" + announcement.title + "」嗎？學生之後將看不到這則連結。", "confirm");
+      if (!ok) return;
+      try {
+        await announcementApi("deleteAnnouncement", { id: announcement.id });
+        showToast("公告已刪除。", "success");
+      } catch (error) {
+        await showModal("刪除公告失敗", error.message || "請稍後再試。", "error");
+      }
+    }
+
+    async function moveAnnouncement(id, delta) {
+      const currentIndex = state.announcements.findIndex(function (item) { return String(item.id) === String(id); });
+      if (currentIndex < 0) return;
+      const pinned = announcementIsPinned(state.announcements[currentIndex].pinned);
+      let targetIndex = currentIndex + delta;
+      while (targetIndex >= 0 && targetIndex < state.announcements.length && announcementIsPinned(state.announcements[targetIndex].pinned) !== pinned) targetIndex += delta;
+      if (targetIndex < 0 || targetIndex >= state.announcements.length) return;
+      const rows = state.announcements.slice();
+      const moved = rows.splice(currentIndex, 1)[0];
+      rows.splice(targetIndex, 0, moved);
+      try {
+        const result = await announcementApi("reorderAnnouncements", { mutationId: createId("MU"), items: rows.map(function (item, index) { return { id: item.id, order: index + 1 }; }) });
+        if (!result.data) state.announcements = normalizeAnnouncements(rows);
+        showToast("公告順序已更新。", "success");
+      } catch (error) {
+        await showModal("調整公告順序失敗", error.message || "請稍後再試。", "error");
+      }
     }
 
     function bindPullToRefreshTarget(target, canStart, refresh, indicator) {
@@ -1459,10 +1751,10 @@
       if (!window.indexedDB) return Promise.resolve(null);
       if (dbPromise) return dbPromise;
       dbPromise = new Promise(function (resolve, reject) {
-        const request = indexedDB.open(DB_NAME, 3);
+        const request = indexedDB.open(DB_NAME, 4);
         request.onupgradeneeded = function () {
           const db = request.result;
-          ["boards", "files", "ink", "classroomState", "submissions", "drafts", "outbox"].forEach(function (store) {
+          ["boards", "announcements", "files", "ink", "classroomState", "submissions", "drafts", "outbox"].forEach(function (store) {
             if (!db.objectStoreNames.contains(store)) db.createObjectStore(store, { keyPath: "id" });
           });
         };
@@ -1472,7 +1764,7 @@
       return dbPromise;
     }
 
-    const memoryStore = { boards: new Map(), files: new Map(), ink: new Map(), classroomState: new Map(), submissions: new Map(), drafts: new Map(), outbox: new Map() };
+    const memoryStore = { boards: new Map(), announcements: new Map(), files: new Map(), ink: new Map(), classroomState: new Map(), submissions: new Map(), drafts: new Map(), outbox: new Map() };
 
     async function localPut(store, value) {
       const db = await openLocalDb();
@@ -1689,11 +1981,78 @@
       return counts;
     }
 
+    async function localAnnouncementResponse(announcement) {
+      const rows = normalizeAnnouncements(await localAll("announcements"));
+      const response = { ok: true, data: rows, serverTime: new Date().toISOString() };
+      if (announcement) response.announcement = normalizeAnnouncements([announcement])[0] || null;
+      return response;
+    }
+
     async function localRequest(action, payload) {
       const data = payload || {};
       if (action === "settings") return { ok: true, settings: { adminConfigured: false, maxImageBytes: MAX_IMAGE_BYTES, maxPdfBytes: MAX_PDF_BYTES } };
       if (action === "verifyAdmin") return { ok: true, token: "local-admin", configured: false };
       if (action === "sheetUrl") return { ok: true, url: "" };
+      if (action === "listAnnouncements") return localAnnouncementResponse();
+      if (action === "createAnnouncement") {
+        const title = String(data.title || "").trim().slice(0, 100);
+        if (!title) throw new Error("請填寫公告標題。");
+        const url = normalizeAnnouncementUrl(data.url);
+        const id = String(data.id || createId("AN"));
+        const existing = await localGet("announcements", id);
+        if (existing) return localAnnouncementResponse(existing);
+        const rows = normalizeAnnouncements(await localAll("announcements"));
+        const now = new Date().toISOString();
+        const announcement = { id: id, title: title, url: url, pinned: announcementIsPinned(data.pinned), order: Math.max(1, Math.floor(Number(data.order) || rows.length + 1)), status: "啟用", createdAt: now, updatedAt: now };
+        await localPut("announcements", announcement);
+        return localAnnouncementResponse(announcement);
+      }
+      if (action === "updateAnnouncement") {
+        const id = String(data.id || "").trim();
+        if (!id) throw new Error("缺少公告 ID。");
+        const existing = await localGet("announcements", id);
+        if (!existing) throw new Error("找不到指定公告。");
+        const announcement = Object.assign({}, existing);
+        if (data.title !== undefined) {
+          announcement.title = String(data.title || "").trim().slice(0, 100);
+          if (!announcement.title) throw new Error("公告標題不可為空白。");
+        }
+        if (data.url !== undefined) announcement.url = normalizeAnnouncementUrl(data.url);
+        if (data.pinned !== undefined) announcement.pinned = announcementIsPinned(data.pinned);
+        if (data.order !== undefined) announcement.order = Math.max(1, Math.floor(Number(data.order) || existing.order || 1));
+        announcement.updatedAt = new Date().toISOString();
+        await localPut("announcements", announcement);
+        return localAnnouncementResponse(announcement);
+      }
+      if (action === "reorderAnnouncements") {
+        const rows = normalizeAnnouncements(await localAll("announcements"));
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (items.length !== rows.length) throw new Error("公告排序資料不完整。");
+        const rowMap = new Map(rows.map(function (item) { return [String(item.id), item]; }));
+        const seen = new Set();
+        const updatedAt = new Date().toISOString();
+        for (const item of items) {
+          const id = String(item && item.id || "");
+          if (!id || !rowMap.has(id) || seen.has(id)) throw new Error("公告排序資料不正確。");
+          seen.add(id);
+        }
+        for (let index = 0; index < items.length; index += 1) {
+          const item = items[index];
+          const announcement = Object.assign({}, rowMap.get(String(item.id)), { order: index + 1, updatedAt: updatedAt });
+          await localPut("announcements", announcement);
+        }
+        return localAnnouncementResponse();
+      }
+      if (action === "deleteAnnouncement") {
+        const id = String(data.id || "").trim();
+        if (!id) throw new Error("缺少公告 ID。");
+        const existing = await localGet("announcements", id);
+        if (existing) await localDelete("announcements", id);
+        const response = await localAnnouncementResponse();
+        response.id = id;
+        response.deleted = existing ? 1 : 0;
+        return response;
+      }
       if (action === "listInk") {
         const inkRows = (await localAll("ink")).filter(function (item) { return String(item.boardId) === String(data.boardId); });
         const materialId = data.materialId ? String(data.materialId) : "";
@@ -2426,10 +2785,11 @@
       return { view: view, boardId: boardId };
     }
 
-      async function renderRoute() {
-       const generation = ++routeLoadGeneration;
-        if (teacherInkActivePointerId !== null) cancelTeacherInk();
-        cancelClassroomSyncRequests();
+    async function renderRoute() {
+      const generation = ++routeLoadGeneration;
+      removeFloatingAnnouncementSurfaces();
+      if (teacherInkActivePointerId !== null) cancelTeacherInk();
+      cancelClassroomSyncRequests();
       if (state.pollTimer) { window.clearInterval(state.pollTimer); state.pollTimer = null; }
       const route = readRoute();
       state.view = ["manager", "editor", "review", "student"].indexOf(route.view) > -1 ? route.view : "manager";
@@ -2459,6 +2819,10 @@
       if (managerLead) managerLead.textContent = "建立不同課次的教材版面，放置問答圖釘；上課時用全螢幕 PDF 直接畫記，點圖釘查看學生作答。";
       document.getElementById("createBoardButton").addEventListener("click", function () { openBoardForm(); });
       document.getElementById("openSettingsFromHero").addEventListener("click", openSettingsModal);
+      const announcementAnchor = main.querySelector(".dashboard-hero");
+      if (announcementAnchor) announcementAnchor.insertAdjacentHTML("afterend", announcementSurfaceHtml("manager", true, false));
+      renderAnnouncementSurfaces();
+      await loadAnnouncements();
 
        const localBoards = (await localAll("boards")).filter(function (board) { return board.status !== "封存"; });
        if (!isCurrentRouteLoad(generation, "manager", "")) return;
@@ -4882,7 +5246,11 @@
        if (!isCurrentRouteLoad(generation, "student", boardId)) return;
        const studentMaterialId = String(state.activeMaterialId || "");
         main.innerHTML = "<section class=\"student-shell\"><div class=\"student-banner\"><div><p class=\"eyebrow\">STUDENT RESPONSE</p><h1>" + escapeHtml(state.board.name) + "</h1><p>點擊 PDF 上的問答區，拍照或輸入文字完成作答。</p></div><div class=\"student-identity\"><label for=\"studentNicknameField\">你的暱稱</label><input id=\"studentNicknameField\" maxlength=\"40\" placeholder=\"例如：第一組\" value=\"" + escapeHtml(state.nickname) + "\"></div></div><div class=\"offline-note\">目前離線，送出的答案會先保留在這台裝置，網路恢復後自動補傳。</div><div class=\"workspace-shell student-workspace\"><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentPrevPage\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"studentNextPage\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentZoomOut\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"studentZoomIn\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"studentFit\" type=\"button\">適合</button></div></div><div class=\"pdf-scroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"studentProgress\">尚未作答</span></div><div class=\"area-list\" id=\"studentAreaList\"></div><div class=\"answer-panel\" id=\"answerPanel\"><div class=\"answer-panel-empty\"><div><strong>從 PDF 選一個問答區</strong><span>你的答案會和這份教材版面分開保存。</span></div></div></div></aside></div></div></div></section>";
-       const studentSidebar = main.querySelector(".student-workspace .workspace-sidebar");
+        const studentSidebarMount = main.querySelector(".student-workspace .workspace-sidebar");
+        if (studentSidebarMount) studentSidebarMount.insertAdjacentHTML("afterbegin", announcementSurfaceHtml("student", false, true));
+        renderAnnouncementSurfaces();
+        await loadAnnouncements();
+        const studentSidebar = main.querySelector(".student-workspace .workspace-sidebar");
        const studentAreaList = document.getElementById("studentAreaList");
        const studentAnswerPanel = document.getElementById("answerPanel");
        if (studentSidebar && studentAreaList && studentAnswerPanel) studentSidebar.insertBefore(studentAnswerPanel, studentAreaList);
@@ -5664,11 +6032,13 @@
       if (!isCurrentRouteLoad(generation, "review", boardId)) return;
       const reviewMaterialId = String(state.activeMaterialId || "");
       main.innerHTML = "<section class=\"review-shell\"><div class=\"page-intro\" style=\"margin-bottom:0;\"><div><p class=\"eyebrow\">TEACHER REVIEW DESK</p><h1 style=\"font-size:clamp(28px,4vw,42px);\">" + escapeHtml(state.board.name) + "</h1><p class=\"lede\">課堂中打開學生答案，直接在照片上留下批改筆跡。</p></div><div class=\"page-actions\"><button class=\"button subtle\" id=\"reviewBackButton\" type=\"button\">返回版面總覽</button><button class=\"button small\" id=\"exportJsonButton\" type=\"button\">匯出 JSON</button><button class=\"button small\" id=\"exportCsvButton\" type=\"button\">匯出 CSV</button></div></div><div class=\"offline-note\">目前離線，教師批改會先保留在本機，網路恢復後自動補傳。</div><div class=\"review-grid\"><aside class=\"submission-list\"><div class=\"submission-list-head\"><strong>學生作答</strong><span class=\"meta-chip\" id=\"reviewCount\">載入中</span></div><div class=\"submission-items\" id=\"submissionItems\"><div class=\"inline-message\">正在讀取……</div></div></aside><section class=\"review-panel\" id=\"reviewPanel\"><div class=\"review-empty\"><div><strong>選一筆作答開始批改</strong><span>學生提交後會出現在左側清單。</span></div></div></section></div></section>";
-      state.activeAreaId = "";
-      state.reviewSubmission = null;
-      mountClassroomPdf();
-      bindClassroomPdfEvents();
-      renderReviewAreaList();
+       state.activeAreaId = "";
+       state.reviewSubmission = null;
+       mountClassroomPdf();
+       bindClassroomPdfEvents();
+       mountClassroomAnnouncementSurface();
+       await loadAnnouncements();
+       renderReviewAreaList();
       await Promise.all([loadTeacherInk(reviewMaterialId), loadClassroomSync()]);
       if (!isCurrentRouteLoad(generation, "review", boardId)) return;
       await renderPdfPage();
