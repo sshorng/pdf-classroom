@@ -769,7 +769,7 @@
       reviewShape: "arrow",
       reviewZoom: 1,
       adminToken: localStorage.getItem(APP_KEY + "admin_token") || "",
-      teacherAuthenticated: Boolean(localStorage.getItem(APP_KEY + "admin_token")),
+      teacherAuthenticated: false,
       pollTimer: null,
       lastStudentSubmissionPollAt: 0,
       lastReviewSubmissionPollAt: 0,
@@ -1320,7 +1320,7 @@
       });
       document.getElementById("settingsButton").addEventListener("click", openSettingsModal);
       document.getElementById("teacherEntryButton").addEventListener("click", function () {
-        if (state.teacherAuthenticated || state.adminToken) logoutTeacher();
+        if (state.teacherAuthenticated) logoutTeacher();
         else goView("manager");
       });
       document.querySelector("[data-close-settings]").addEventListener("click", closeSettingsModal);
@@ -2825,7 +2825,7 @@
       const teacherButton = document.getElementById("teacherEntryButton");
       const sheetLink = document.getElementById("__sheetLink");
       const teacherVisible = view === "portal" || view === "manager";
-      const signedIn = Boolean(state.teacherAuthenticated || state.adminToken);
+      const signedIn = Boolean(state.teacherAuthenticated);
       if (teacherButton) {
         teacherButton.hidden = !teacherVisible;
         teacherButton.textContent = signedIn ? "登出" : "教師入口";

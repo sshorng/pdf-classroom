@@ -62,8 +62,12 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     await localPut("boards", { id: archivedId, name: "不應公開版面", description: "", pdfFileId: "", pdfFileName: "", pdfMime: "application/pdf", materials: [], areas: [], answerMasks: [], status: "封存", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
 
     history.replaceState({}, "", "/index.html");
+    state.adminToken = "stale-token-from-previous-session";
+    state.teacherAuthenticated = false;
+    localStorage.setItem(APP_KEY + "admin_token", state.adminToken);
     await runRouteRender();
     const portalReady = state.view === "portal" && Boolean(document.querySelector("[data-announcement-surface=portal]")) && !document.getElementById("teacherEntryButton").hidden;
+    const staleTokenStillShowsEntry = document.getElementById("teacherEntryButton").textContent === "教師入口";
     const portalHasNoDuplicateTeacherButton = !document.getElementById("portalTeacherButton");
     const publicBoardResult = await localRequest("listPublicBoards", {});
     const publicBoardIds = (publicBoardResult.data || []).map((item) => item.id);
@@ -92,11 +96,12 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     await localDelete("boards", boardId);
     await localDelete("boards", archivedId);
     state.demo = originalDemo;
-    return JSON.stringify({ portalReady, portalHasNoDuplicateTeacherButton, publicListFiltersArchived, portalCardsHaveNoStudentLabel, portalHasNoTeacherControls, boardsSortByUpdatedAt, teacherEntryOpensManager, teacherShowsLogout, teacherAnnouncementAvailable, teacherLogoutReturnsPortal, studentHasPdfShell, studentHasNoAnnouncement, shareIsStudentOnly });
+    return JSON.stringify({ portalReady, staleTokenStillShowsEntry, portalHasNoDuplicateTeacherButton, publicListFiltersArchived, portalCardsHaveNoStudentLabel, portalHasNoTeacherControls, boardsSortByUpdatedAt, teacherEntryOpensManager, teacherShowsLogout, teacherAnnouncementAvailable, teacherLogoutReturnsPortal, studentHasPdfShell, studentHasNoAnnouncement, shareIsStudentOnly });
   })()`);
 
   const checks = JSON.parse(result);
   assert(checks.portalReady === true, "根網址未開啟公開入口或教師入口未顯示");
+  assert(checks.staleTokenStillShowsEntry === true, "尚未完成登入驗證時不應顯示登出");
   assert(checks.portalHasNoDuplicateTeacherButton === true, "公開入口仍有重複的內容區教師入口");
   assert(checks.publicListFiltersArchived === true, "公開版面清單未排除封存版面");
   assert(checks.portalCardsHaveNoStudentLabel === true, "公開版面卡片仍顯示學生入口標籤");
