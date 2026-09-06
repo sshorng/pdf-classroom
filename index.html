@@ -188,8 +188,8 @@
     .announcement-heading .eyebrow { margin-bottom: 5px; }
     .announcement-heading h2 { margin-bottom: 3px; font-size: 21px; }
     .announcement-heading p:last-child { margin-bottom: 0; color: var(--muted); font-size: 12px; }
-    .announcement-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 11px; }
-    .announcement-card { position: relative; display: flex; min-height: 142px; flex-direction: column; padding: 15px; background: rgba(255,255,255,.86); border: 1px solid #dfe5dd; border-radius: 15px; box-shadow: 0 6px 15px rgba(44, 52, 47, .06); }
+    .announcement-list { display: flex; min-width: 0; flex-wrap: nowrap; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 10px; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-color: #b6c8bf transparent; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+    .announcement-card { position: relative; display: flex; flex: 0 0 min(340px, calc(100% - 24px)); width: min(340px, calc(100% - 24px)); min-height: 142px; flex-direction: column; padding: 15px; background: rgba(255,255,255,.86); border: 1px solid #dfe5dd; border-radius: 15px; scroll-snap-align: start; box-shadow: 0 6px 15px rgba(44, 52, 47, .06); }
     .announcement-card.is-pinned { background: #fffaf0; border-color: #e7d4ad; }
     .announcement-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
     .announcement-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; color: var(--teal-dark); background: var(--teal-soft); border-radius: 999px; font-size: 11px; font-weight: 800; }
@@ -202,7 +202,7 @@
     .announcement-open { margin-top: auto; color: var(--accent-dark); font-size: 12px; font-weight: 800; }
     .announcement-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(225, 222, 212, .8); }
     .announcement-card-actions .area-action-button { width: 29px; height: 29px; }
-    .announcement-empty { display: grid; gap: 2px; padding: 18px; color: var(--muted); background: rgba(255,255,255,.62); border: 1px dashed #c9d4ca; border-radius: 13px; font-size: 12px; }
+    .announcement-empty { display: grid; flex: 1 0 100%; gap: 2px; padding: 18px; color: var(--muted); background: rgba(255,255,255,.62); border: 1px dashed #c9d4ca; border-radius: 13px; font-size: 12px; }
     .announcement-empty strong { color: var(--teal-dark); font-size: 14px; }
     .announcement-empty.is-error { color: #805d31; background: #fff5dd; border-color: #ead4a5; }
     .announcement-checkbox { display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; background: #f7f5ef; border: 1px solid var(--line); border-radius: 11px; cursor: pointer; }
@@ -213,8 +213,8 @@
     .announcement-surface-compact { margin: 0 0 17px; padding: 15px; border-radius: 16px; }
     .announcement-surface-compact .announcement-heading { align-items: flex-start; margin-bottom: 12px; }
     .announcement-surface-compact .announcement-heading h2 { font-size: 17px; }
-    .announcement-surface-compact .announcement-list { grid-template-columns: 1fr; }
-    .announcement-surface-compact .announcement-card { min-height: 112px; padding: 12px; }
+    .announcement-surface-compact .announcement-list { gap: 10px; }
+    .announcement-surface-compact .announcement-card { flex-basis: min(300px, calc(100% - 16px)); width: min(300px, calc(100% - 16px)); min-height: 112px; padding: 12px; }
     .announcement-surface-compact .announcement-link strong { font-size: 14px; }
     .announcement-drawer { position: fixed; top: 68px; right: 14px; z-index: 80; width: min(520px, calc(100vw - 28px)); max-height: calc(100vh - 84px); overflow: auto; padding: 14px; background: rgba(255,253,248,.97); border: 1px solid rgba(225,222,212,.95); border-radius: 19px; box-shadow: 0 20px 60px rgba(23,35,30,.24); opacity: 0; pointer-events: none; transform: translateY(-10px); transition: opacity .18s ease, transform .18s ease; }
     .announcement-drawer.is-open { opacity: 1; pointer-events: auto; transform: translateY(0); }
@@ -578,7 +578,7 @@
       .announcement-surface { padding: 17px; }
       .announcement-heading { align-items: flex-start; flex-direction: column; }
       .announcement-heading > .button { align-self: flex-start; }
-      .announcement-list { grid-template-columns: 1fr; }
+      .announcement-list { gap: 10px; }
       .workspace-head, .workspace-sidebar { padding: 15px; }
       .toolbar-button { min-width: 44px; min-height: 44px; }
       .modal-card { padding: 21px 17px; }

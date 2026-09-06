@@ -77,6 +77,11 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     const student = host.querySelector("[data-announcement-surface=student]");
     const managerCards = manager && manager.querySelectorAll(".announcement-card").length === 3;
     const managerHasControls = manager && manager.querySelectorAll("[data-announcement-edit]").length === 3 && manager.querySelectorAll("[data-announcement-delete]").length === 3;
+    const managerList = manager && manager.querySelector(".announcement-list");
+    const managerCard = manager && manager.querySelector(".announcement-card");
+    const listStyle = managerList && getComputedStyle(managerList);
+    const cardStyle = managerCard && getComputedStyle(managerCard);
+    const horizontalCardLayout = Boolean(managerList && managerCard && listStyle.display === "flex" && listStyle.flexDirection === "row" && listStyle.flexWrap === "nowrap" && listStyle.overflowX === "auto" && cardStyle.flexBasis !== "auto");
     const studentIsReadOnly = student && !student.querySelector("[data-announcement-add]") && !student.querySelector(".announcement-card-actions");
     const link = student && student.querySelector(".announcement-link");
     const linkIsSafe = link && link.target === "_blank" && link.rel.includes("noopener") && link.rel.includes("noreferrer");
@@ -104,7 +109,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     state.demo = originalDemo;
     state.announcements = originalAnnouncements;
     renderAnnouncementSurfaces();
-    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, reorderWorks, managerCards, managerHasControls, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
+    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, reorderWorks, managerCards, managerHasControls, horizontalCardLayout, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
   })()`);
 
   const checks = JSON.parse(result);
@@ -114,6 +119,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
   assert(checks.reorderWorks === true, "公告排序更新失敗");
   assert(checks.managerCards === true, "教師端公告卡片未正確渲染");
   assert(checks.managerHasControls === true, "教師端公告管理控制未出現");
+  assert(checks.horizontalCardLayout === true, "公告卡片未以橫向捲動排列");
   assert(checks.studentIsReadOnly === true, "學生端公告仍可見管理控制");
   assert(checks.linkIsSafe === true, "公告連結未以安全的新分頁開啟");
   assert(checks.classroomDrawerMounted === true, "教師課堂公告抽屜未正確掛載或錯誤提供管理控制");
