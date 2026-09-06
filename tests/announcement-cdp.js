@@ -57,12 +57,15 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
       invalidUrlRejected = true;
     }
 
-    await localRequest("createAnnouncement", { id: ids[0], title: "一般入口", description: "提供學生查閱資料。", url: "https://example.com/normal", pinned: false, order: 1 });
+    await localRequest("createAnnouncement", { id: ids[0], title: "一般入口", description: "提供學生查閱資料。", links: [{ label: "查字典", url: "https://example.com/normal" }, { label: "參考影片", url: "https://example.com/video" }], pinned: false, order: 1 });
     await localRequest("createAnnouncement", { id: ids[1], title: "置頂入口", url: "http://example.com/pinned", pinned: true, order: 2 });
     await localRequest("createAnnouncement", { id: ids[2], title: "第二個置頂入口", url: "https://example.com/second", pinned: true, order: 3 });
     const created = await localRequest("listAnnouncements", {});
     const initialSort = created.data.map((item) => item.id).join(",") === "AN-cdp-b,AN-cdp-c,AN-cdp-a";
+    const multipleLinksStored = created.data.find((item) => item.id === ids[0]).links.length === 2 && created.data.find((item) => item.id === ids[0]).links[1].label === "參考影片";
     await localRequest("updateAnnouncement", { id: ids[0], title: "更新後入口", url: "https://example.com/updated", pinned: false });
+    const updated = await localRequest("listAnnouncements", {});
+    const legacyUrlUpdatePreservesLinks = updated.data.find((item) => item.id === ids[0]).links.length === 2 && updated.data.find((item) => item.id === ids[0]).links[0].url === "https://example.com/updated";
     const reordered = await localRequest("reorderAnnouncements", { items: [{ id: ids[2] }, { id: ids[1] }, { id: ids[0] }] });
     const reorderWorks = reordered.data.map((item) => item.id).join(",") === "AN-cdp-c,AN-cdp-b,AN-cdp-a";
 
@@ -80,6 +83,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     const managerDescriptionRemoved = manager && manager.querySelectorAll(".announcement-heading > div > p").length === 1;
     const studentDescriptionRemoved = student && student.querySelectorAll(".announcement-heading > div > p").length === 1;
     const descriptionDisplayed = manager && manager.querySelector(".announcement-description") && manager.querySelector(".announcement-description").textContent === "提供學生查閱資料。";
+    const managerMultipleLinks = manager && manager.querySelectorAll(".announcement-link").length === 4 && manager.querySelector(".announcement-card-title").textContent === "第二個置頂入口";
     const managerList = manager && manager.querySelector(".announcement-list");
     const managerCard = manager && manager.querySelector(".announcement-card");
     const listStyle = managerList && getComputedStyle(managerList);
@@ -96,6 +100,14 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     const classroomDrawerMounted = Boolean(document.getElementById("classroomAnnouncementButton") && classroomDrawer && classroomDrawer.querySelector("[data-announcement-surface=classroom]") && !classroomDrawer.querySelector("[data-announcement-add]") && !classroomDrawer.querySelector(".announcement-card-actions"));
     openAnnouncementForm();
     const descriptionFieldOptional = Boolean(document.querySelector("#modalContent #announcementDescriptionField") && !document.querySelector("#modalContent #announcementDescriptionField").required);
+    const linkEditor = document.querySelector("#modalContent #announcementLinksEditor");
+    const addLinkButton = document.querySelector("#modalContent #addAnnouncementLinkButton");
+    const initialLinkRows = linkEditor && linkEditor.querySelectorAll("[data-announcement-link-row]").length === 1;
+    if (addLinkButton) addLinkButton.click();
+    const linkEditorAddsRows = linkEditor && linkEditor.querySelectorAll("[data-announcement-link-row]").length === 2;
+    const secondLinkRemove = linkEditor && linkEditor.querySelectorAll("[data-announcement-link-row]")[1] && linkEditor.querySelectorAll("[data-announcement-link-row]")[1].querySelector("[data-remove-announcement-link]");
+    if (secondLinkRemove) secondLinkRemove.click();
+    const linkEditorRemovesRows = linkEditor && linkEditor.querySelectorAll("[data-announcement-link-row]").length === 1;
     const pinnedInput = document.querySelector("#modalContent .announcement-checkbox input");
     const pinnedCopy = document.querySelector("#modalContent .announcement-checkbox span");
     const pinnedInputRect = pinnedInput && pinnedInput.getBoundingClientRect();
@@ -113,20 +125,26 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     state.demo = originalDemo;
     state.announcements = originalAnnouncements;
     renderAnnouncementSurfaces();
-    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, reorderWorks, managerCards, managerHasControls, managerDescriptionRemoved, studentDescriptionRemoved, descriptionDisplayed, descriptionFieldOptional, horizontalCardLayout, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
+    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, multipleLinksStored, legacyUrlUpdatePreservesLinks, reorderWorks, managerCards, managerHasControls, managerDescriptionRemoved, studentDescriptionRemoved, descriptionDisplayed, managerMultipleLinks, descriptionFieldOptional, initialLinkRows, linkEditorAddsRows, linkEditorRemovesRows, horizontalCardLayout, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
   })()`);
 
   const checks = JSON.parse(result);
   assert(checks.ready === true, "公告測試頁面未準備完成");
   assert(checks.invalidUrlRejected === true, "公告未拒絕非 http／https 連結");
   assert(checks.initialSort === true, "公告置頂與初始排序錯誤");
+  assert(checks.multipleLinksStored === true, "單則公告未保存多個連結");
+  assert(checks.legacyUrlUpdatePreservesLinks === true, "更新舊版單一網址時未保留其他連結");
   assert(checks.reorderWorks === true, "公告排序更新失敗");
   assert(checks.managerCards === true, "教師端公告卡片未正確渲染");
   assert(checks.managerHasControls === true, "教師端公告管理控制未出現");
   assert(checks.managerDescriptionRemoved === true, "公告標題下方說明文字未移除");
   assert(checks.studentDescriptionRemoved === true, "學生端公告標題下方說明文字未移除");
   assert(checks.descriptionDisplayed === true, "公告簡要說明未顯示在標題下方");
+  assert(checks.managerMultipleLinks === true, "公告卡片未顯示多個連結");
   assert(checks.descriptionFieldOptional === true, "公告簡要說明欄位未設為選填");
+  assert(checks.initialLinkRows === true, "公告表單未建立初始連結欄位");
+  assert(checks.linkEditorAddsRows === true, "公告表單無法新增連結欄位");
+  assert(checks.linkEditorRemovesRows === true, "公告表單無法移除連結欄位");
   assert(checks.horizontalCardLayout === true, "公告卡片未以橫向捲動排列");
   assert(checks.studentIsReadOnly === true, "學生端公告仍可見管理控制");
   assert(checks.linkIsSafe === true, "公告連結未以安全的新分頁開啟");

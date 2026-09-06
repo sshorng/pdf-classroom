@@ -83,8 +83,8 @@ const MAX_TEXT = {
 const MAX_SHEET_JSON_CHARS = 45000;
 const TABLE_CACHE_SECONDS = 3;
 const TABLE_CACHE_MAX_CHARS = 90000;
-const TABLE_CACHE_PREFIX = "pdfw_table_v2_materials_";
-const DATABASE_READY_CACHE_KEY = "pdfw_database_ready_v3_materials";
+const TABLE_CACHE_PREFIX = "pdfw_table_v3_announcements_";
+const DATABASE_READY_CACHE_KEY = "pdfw_database_ready_v4_announcement_links";
 const JSON_REFERENCE_CACHE_PREFIX = "pdfw_json_v1_";
 const JSON_REFERENCE_CACHE_SECONDS = 300;
 const INK_DELTA_CACHE_PREFIX = "pdfw_ink_delta_v1_";
@@ -1001,6 +1001,39 @@ function normalizeAnnouncementUrl_(value) {
   return url;
 }
 
+function normalizeAnnouncementLink_(value) {
+  const item = value && typeof value === "object" && !Array.isArray(value) ? value : { url: value };
+  const labelValue = item.label !== undefined ? item.label : item.name;
+  return {
+    label: cleanText_(labelValue, MAX_TEXT.announcementLinkLabel),
+    url: normalizeAnnouncementUrl_(item.url)
+  };
+}
+
+function normalizeAnnouncementLinks_(value, fallbackUrl) {
+  let rows = parseArray_(value);
+  if (!rows.length && fallbackUrl) rows = [{ url: fallbackUrl }];
+  if (!rows.length) throw new Error("公告至少要有一個連結。");
+  if (rows.length > MAX_ANNOUNCEMENT_LINKS) throw new Error("一則公告最多可新增 " + MAX_ANNOUNCEMENT_LINKS + " 個連結。");
+  return rows.map(normalizeAnnouncementLink_);
+}
+
+function storedAnnouncementLinks_(item) {
+  const rows = parseArray_(item && item.links);
+  const links = [];
+  rows.forEach(function (value) {
+    try {
+      links.push(normalizeAnnouncementLink_(value));
+    } catch (error) {}
+  });
+  if (!links.length && item && item.url) {
+    try {
+      links.push(normalizeAnnouncementLink_({ url: item.url }));
+    } catch (error) {}
+  }
+  return links;
+}
+
 function normalizeAnnouncementOrder_(value, fallback) {
   const candidate = Number(value);
   const defaultValue = Number(fallback) || 1;
@@ -1008,11 +1041,13 @@ function normalizeAnnouncementOrder_(value, fallback) {
 }
 
 function publicAnnouncement_(item) {
+  const links = storedAnnouncementLinks_(item);
   return {
     id: String(item.id || ""),
     title: String(item.title || ""),
     description: String(item.description || ""),
-    url: String(item.url || ""),
+    url: links.length ? links[0].url : "",
+    links: links,
     pinned: announcementPinned_(item.pinned),
     order: normalizeAnnouncementOrder_(item.order, 1),
     status: String(item.status || "啟用"),
@@ -1043,7 +1078,8 @@ function createAnnouncement_(payload) {
   const title = cleanText_(payload.title, MAX_TEXT.title);
   if (!title) throw new Error("請填寫公告標題。");
   const description = cleanText_(payload.description, MAX_TEXT.announcementDescription);
-  const url = normalizeAnnouncementUrl_(payload.url);
+  const links = normalizeAnnouncementLinks_(payload.links, payload.url);
+  const url = links[0].url;
   const id = cleanText_(payload.id, 120) || makeId_("AN");
   const existing = readTable_("announcements").find(function (item) { return String(item.id) === id; });
   if (existing) return announcementResult_(existing);
@@ -1054,6 +1090,7 @@ function createAnnouncement_(payload) {
     title: title,
     description: description,
     url: url,
+    links: JSON.stringify(links),
     pinned: announcementPinned_(payload.pinned),
     order: normalizeAnnouncementOrder_(payload.order, activeRows.length + 1),
     status: "啟用",
@@ -1076,7 +1113,18 @@ function updateAnnouncement_(payload) {
     if (!fields.title) throw new Error("公告標題不可為空白。");
   }
   if (payload.description !== undefined) fields.description = cleanText_(payload.description, MAX_TEXT.announcementDescription);
-  if (payload.url !== undefined) fields.url = normalizeAnnouncementUrl_(payload.url);
+  if (payload.links !== undefined) {
+    const links = normalizeAnnouncementLinks_(payload.links, payload.url);
+    fields.url = links[0].url;
+    fields.links = JSON.stringify(links);
+  } else if (payload.url !== undefined) {
+    const url = normalizeAnnouncementUrl_(payload.url);
+    const links = storedAnnouncementLinks_(existing);
+    if (links.length) links[0].url = url;
+    else links.push({ label: "", url: url });
+    fields.url = url;
+    fields.links = JSON.stringify(links);
+  }
   if (payload.pinned !== undefined) fields.pinned = announcementPinned_(payload.pinned);
   if (payload.order !== undefined) fields.order = normalizeAnnouncementOrder_(payload.order, existing.order);
   updateRow_("announcements", id, fields);
