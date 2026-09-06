@@ -74,6 +74,9 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     select.value = target.value;
     select.dispatchEvent(new Event("change", { bubbles: true }));
     const switched = await waitFor(() => state.activeMaterialId === target.value && select.value === target.value && state.pdf && state.pdf.numPages > 0 && state.materialPdfCache.has(target.value), 15000);
+    select.value = originalId;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    const switchedBack = await waitFor(() => state.activeMaterialId === originalId && select.value === originalId && state.pdf && state.pdf.numPages > 0 && state.materialPdfCache.has(originalId), 15000);
     const originalView = state.view;
     const originalRevision = state.classroomStateRevision;
     const originalActiveId = state.activeMaterialId;
@@ -104,7 +107,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     window.loadReviewSubmissions = originalLoadReviews;
     window.renderPdfPage = originalRenderPdf;
     window.persistClassroomState = originalPersistState;
-    const result = { ready: true, compact, options, target: target.value, active: state.activeMaterialId, selected: select.value, pages: state.pdf && state.pdf.numPages, switched, reviewSelectionGuarded, pdfTextAssetsConfigured };
+    const result = { ready: true, compact, options, target: target.value, active: state.activeMaterialId, selected: select.value, pages: state.pdf && state.pdf.numPages, switched, switchedBack, reviewSelectionGuarded, pdfTextAssetsConfigured };
     window.loadClassroomSync = originalSync;
     window.loadStudentSubmissions = originalSubmissions;
     return JSON.stringify(result);
@@ -115,6 +118,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
   assert(checks.compact === true, "教材控制未固定為緊湊的「教材」按鈕");
   assert(checks.options.length > 1, "教材下拉選單缺少教材選項");
   assert(checks.switched === true, "選擇其他教材後 PDF 未切換");
+  assert(checks.switchedBack === true, "切換回原教材後 PDF cache 不可用");
   assert(checks.reviewSelectionGuarded === true, "教師切換教材未在載入前鎖住本地選擇");
   assert(checks.pdfTextAssetsConfigured === true, "PDF 直式文字所需字型資源未設定");
   console.log("material-switch-cdp=" + JSON.stringify(checks));

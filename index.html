@@ -7,11 +7,6 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23315f59'/%3E%3Cpath d='M28 24h32a12 12 0 0 1 12 12v40a8 8 0 0 1-8 8H32a12 12 0 0 1-12-12V32a8 8 0 0 1 8-8z' fill='%23fbf8f1'/%3E%3Cpath d='M36 38h28M36 50h24M36 62h16' stroke='%23315f59' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='68' cy='66' r='10' fill='%23c47f78'/%3E%3Cpath d='M65 66l2 2 4-4' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23315f59'/%3E%3Cpath d='M28 24h32a12 12 0 0 1 12 12v40a8 8 0 0 1-8 8H32a12 12 0 0 1-12-12V32a8 8 0 0 1 8-8z' fill='%23fbf8f1'/%3E%3Cpath d='M36 38h28M36 50h24M36 62h16' stroke='%23315f59' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='68' cy='66' r='10' fill='%23c47f78'/%3E%3Cpath d='M65 66l2 2 4-4' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <title>墨卷，互動講義批改</title>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-  <link rel="preconnect" href="https://quickchart.io" crossorigin>
-  <link rel="dns-prefetch" href="https://quickchart.io">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     :root {
       --ink: #263733;
@@ -694,6 +689,9 @@
     const CLASSROOM_SYNC_TIMEOUT = 9000;
     const MAX_ANNOUNCEMENT_LINKS = 8;
     const MAX_ANNOUNCEMENT_LINK_LABEL = 80;
+    const MAX_PDF_CACHE_ENTRIES = 2;
+    const MAX_IMAGE_CACHE_ENTRIES = 40;
+    const PDFJS_SCRIPT_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
     const INK_SAVE_DELAY = 180;
     const INK_WIDTH_STEPS = [2, 4, 6, 8];
     const PDFJS_ASSET_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
@@ -703,10 +701,6 @@
     const PDF_MAX_CANVAS_PIXELS = 12000000;
     const PDF_MAX_CANVAS_DIMENSION = 4096;
     const GAS_URL = resolveGasUrl();
-
-    if (window.pdfjsLib) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    }
 
     const state = {
       demo: localStorage.getItem(APP_KEY + "demo") === "1",
@@ -807,6 +801,7 @@
     let routeLoadGeneration = 0;
     let routeRenderPromise = Promise.resolve();
     let announcementRequestSequence = 0;
+    let pdfJsPromise = null;
 
     function pdfDocumentOptions(bytes) {
       return {
@@ -817,11 +812,94 @@
       };
     }
 
+    function configurePdfJs() {
+      if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      return window.pdfjsLib;
+    }
+
+    function ensurePdfJs() {
+      const loaded = configurePdfJs();
+      if (loaded) return Promise.resolve(loaded);
+      if (pdfJsPromise) return pdfJsPromise;
+      pdfJsPromise = new Promise(function (resolve, reject) {
+        const script = document.createElement("script");
+        script.src = PDFJS_SCRIPT_URL;
+        script.async = true;
+        script.onload = function () {
+          const library = configurePdfJs();
+          if (library) resolve(library);
+          else reject(new Error("PDF 引擎尚未載入，請確認網路連線後重試。"));
+        };
+        script.onerror = function () { reject(new Error("PDF 引擎載入失敗，請確認網路連線後重試。")); };
+        document.head.appendChild(script);
+      }).catch(function (error) {
+        pdfJsPromise = null;
+        throw error;
+      });
+      return pdfJsPromise;
+    }
+
     function disposePdfiumDocument() {
       if (state.pdfiumDocument && typeof state.pdfiumDocument.destroy === "function") state.pdfiumDocument.destroy();
       state.pdfiumDocument = null;
       state.pdfiumDocumentMaterialId = "";
       state.pdfiumDocumentFileId = "";
+    }
+
+    function disposePdfDocument(pdfDocument) {
+      if (!pdfDocument || typeof pdfDocument.destroy !== "function") return;
+      try {
+        const result = pdfDocument.destroy();
+        if (result && typeof result.catch === "function") result.catch(function () {});
+      } catch (error) {}
+    }
+
+    function isCachedPdfDocument(pdfDocument) {
+      if (!pdfDocument) return false;
+      for (const cachedDocument of state.materialPdfCache.values()) {
+        if (cachedDocument === pdfDocument) return true;
+      }
+      return false;
+    }
+
+    function disposeCachedPdfDocument(materialId) {
+      const key = String(materialId || "");
+      const pdfDocument = state.materialPdfCache.get(key);
+      if (pdfDocument) disposePdfDocument(pdfDocument);
+      state.materialPdfCache.delete(key);
+      state.materialPdfBytesCache.delete(key);
+      state.materialPdfLoadCache.delete(key);
+      if (String(state.activeMaterialId || "") === key) {
+        if (state.pdf && state.pdf !== pdfDocument) disposePdfDocument(state.pdf);
+        state.pdf = null;
+        state.pdfBytes = null;
+      }
+    }
+
+    function clearMaterialPdfCache() {
+      const documents = new Set(state.materialPdfCache.values());
+      if (state.pdf) documents.add(state.pdf);
+      documents.forEach(disposePdfDocument);
+      state.pdf = null;
+      state.pdfBytes = null;
+      state.materialPdfCache.clear();
+      state.materialPdfBytesCache.clear();
+      state.materialPdfLoadCache.clear();
+    }
+
+    function rememberMaterialPdf(materialId, pdfDocument, bytes) {
+      const key = String(materialId || "");
+      const previous = state.materialPdfCache.get(key);
+      if (previous && previous !== pdfDocument) disposePdfDocument(previous);
+      state.materialPdfCache.delete(key);
+      state.materialPdfBytesCache.delete(key);
+      state.materialPdfCache.set(key, pdfDocument);
+      state.materialPdfBytesCache.set(key, bytes);
+      while (state.materialPdfCache.size > MAX_PDF_CACHE_ENTRIES) {
+        const oldestKey = state.materialPdfCache.keys().next().value;
+        if (oldestKey === undefined) break;
+        disposeCachedPdfDocument(oldestKey);
+      }
     }
 
     async function loadPdfiumLibrary() {
@@ -1405,8 +1483,16 @@
         document.getElementById("shareQrWrap").style.display = "grid";
       });
       document.getElementById("__sheetLink").addEventListener("click", function () {
+        const sheetLink = document.getElementById("__sheetLink");
+        if (sheetLink.dataset.sheetUrl) {
+          window.open(sheetLink.dataset.sheetUrl, "_blank", "noopener");
+          return;
+        }
         gasGet("sheetUrl").then(function (result) {
-          if (result && result.url) window.open(result.url, "_blank", "noopener");
+          if (result && result.url) {
+            sheetLink.dataset.sheetUrl = result.url;
+            window.open(result.url, "_blank", "noopener");
+          }
         });
       });
       window.addEventListener("online", function () {
@@ -1887,12 +1973,20 @@
     }
 
     async function refreshSheetLink() {
-      if (!GAS_URL || state.demo) return;
+      const sheetLink = document.getElementById("__sheetLink");
+      if (!sheetLink || !GAS_URL || state.demo || sheetLink.dataset.sheetLoaded === "1" || sheetLink.dataset.sheetLoading === "1") return;
+      sheetLink.dataset.sheetLoading = "1";
       try {
         const result = await gasGet("sheetUrl");
-        if (result && result.ok && result.url) document.getElementById("__sheetLink").style.display = "inline-flex";
+        if (result && result.ok && result.url) {
+          sheetLink.dataset.sheetUrl = result.url;
+          sheetLink.dataset.sheetLoaded = "1";
+          sheetLink.style.display = "inline-flex";
+        }
       } catch (error) {
         // 試算表捷徑不是主要功能，連線失敗時保持隱藏。
+      } finally {
+        delete sheetLink.dataset.sheetLoading;
       }
     }
 
@@ -2784,7 +2878,9 @@
       if (state.imageCache.has(fileId)) return state.imageCache.get(fileId);
       const result = await getFileWithCache(fileId, boardId, materialId);
       const dataUrl = base64ToDataUrl(result.base64, result.mime);
+      state.imageCache.delete(fileId);
       state.imageCache.set(fileId, dataUrl);
+      while (state.imageCache.size > MAX_IMAGE_CACHE_ENTRIES) state.imageCache.delete(state.imageCache.keys().next().value);
       return dataUrl;
     }
 
@@ -2794,6 +2890,7 @@
       if (!material || !material.pdfFileId) {
         if (token === state.materialLoadToken) {
           disposePdfiumDocument();
+          if (!isCachedPdfDocument(state.pdf)) disposePdfDocument(state.pdf);
           state.pdf = null;
           state.pdfBytes = null;
         }
@@ -2802,14 +2899,14 @@
       let pdf = state.materialPdfCache.get(String(material.id));
       let bytes = state.materialPdfBytesCache.get(String(material.id));
       if (!pdf) {
-        if (!window.pdfjsLib) throw new Error("PDF 引擎尚未載入，請確認網路連線後重試。");
+        const pdfJs = await ensurePdfJs();
         const materialKey = String(material.id);
         let pending = state.materialPdfLoadCache.get(materialKey);
         if (!pending) {
           pending = (async function () {
             const file = await getFileWithCache(material.pdfFileId, state.board && state.board.id, material.id);
             const loadedBytes = base64ToBytes(file.base64);
-            const loadedPdf = await window.pdfjsLib.getDocument(pdfDocumentOptions(loadedBytes)).promise;
+            const loadedPdf = await pdfJs.getDocument(pdfDocumentOptions(loadedBytes)).promise;
             return { pdf: loadedPdf, bytes: loadedBytes };
           })();
           state.materialPdfLoadCache.set(materialKey, pending);
@@ -2822,10 +2919,10 @@
         const loaded = await pending;
         pdf = loaded.pdf;
         bytes = loaded.bytes;
-        state.materialPdfCache.set(materialKey, pdf);
-        state.materialPdfBytesCache.set(materialKey, bytes);
+        rememberMaterialPdf(materialKey, pdf, bytes);
       }
       if (token !== state.materialLoadToken) return null;
+      if (state.pdf && state.pdf !== pdf && !isCachedPdfDocument(state.pdf)) disposePdfDocument(state.pdf);
       state.pdf = pdf;
       state.pdfBytes = bytes;
       return pdf;
@@ -2853,10 +2950,8 @@
                   const nextActiveMaterial = activeMaterial();
                   const activeMaterialChanged = previousActiveMaterialId !== String(state.activeMaterialId || "");
                   const activePdfChanged = Boolean(previousActiveMaterial && nextActiveMaterial && String(previousActiveMaterial.pdfFileId || "") !== String(nextActiveMaterial.pdfFileId || ""));
-                  if (activeMaterialChanged || activePdfChanged) {
-                    state.materialPdfCache.delete(String(state.activeMaterialId || ""));
-                    state.materialPdfBytesCache.delete(String(state.activeMaterialId || ""));
-                    state.materialPdfLoadCache.delete(String(state.activeMaterialId || ""));
+                   if (activeMaterialChanged || activePdfChanged) {
+                    disposeCachedPdfDocument(state.activeMaterialId);
                     await loadMaterialPdf(state.activeMaterialId);
                     state.currentPage = state.pdf ? clamp(state.currentPage, 1, state.pdf.numPages) : 1;
                     await renderPdfPage();
@@ -2884,12 +2979,8 @@
       state.answerMasks = normalizeAnswerMasks(result.answerMasks || state.board.answerMasks || [], state.board.id);
       const storedMaterialId = state.view === "student" ? localStorage.getItem(APP_KEY + "student_material_" + state.board.id) : "";
       state.activeMaterialId = state.materials.some(function (item) { return String(item.id) === String(storedMaterialId); }) ? storedMaterialId : (state.materials[0] ? state.materials[0].id : "");
-      state.pdf = null;
-      state.pdfBytes = null;
       disposePdfiumDocument();
-      state.materialPdfCache.clear();
-      state.materialPdfBytesCache.clear();
-      state.materialPdfLoadCache.clear();
+      clearMaterialPdfCache();
       state.fileRequestCache.clear();
       state.materialSelectionToken += 1;
       state.answerMaskDrawing = false;
@@ -2947,7 +3038,10 @@
         teacherButton.textContent = signedIn ? "登出" : "教師入口";
         teacherButton.title = signedIn ? "登出教師工作階段" : "開啟教師入口";
       }
-      if (sheetLink) sheetLink.hidden = view === "portal";
+      if (sheetLink) {
+        sheetLink.hidden = view === "portal";
+        if (view === "manager" && state.teacherAuthenticated) refreshSheetLink();
+      }
     }
 
     function logoutTeacher() {
@@ -3819,10 +3913,8 @@
       }
        if (Array.isArray(result.areas) && !hasPendingCatalogMutation) state.areas = normalizeAreas(result.areas, state.boardId);
        if (Array.isArray(result.answerMasks) && !hasPendingCatalogMutation) state.answerMasks = normalizeAnswerMasks(result.answerMasks, state.boardId);
-      if (activeMaterialPdfChanged) {
-        state.materialPdfCache.delete(requestedMaterialId);
-        state.materialPdfBytesCache.delete(requestedMaterialId);
-        state.materialPdfLoadCache.delete(requestedMaterialId);
+       if (activeMaterialPdfChanged) {
+        disposeCachedPdfDocument(requestedMaterialId);
         await loadMaterialPdf(requestedMaterialId);
         if (!isCurrentMaterialContext(syncPayload.boardId, requestedMaterialId, viewAtStart, selectionTokenAtStart) || syncGenerationAtStart !== classroomSyncGeneration) return;
         await renderPdfPage();
@@ -4457,10 +4549,14 @@
       });
     }
 
+    function canvasOutputScale() {
+      return Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    }
+
     function drawLiveSegment(canvas, stroke, endIndex) {
       if (!canvas || !stroke) return;
       const context = canvas.getContext("2d");
-      const scale = window.devicePixelRatio || 1;
+      const scale = canvasOutputScale();
       const width = Number(canvas.dataset.logicalWidth || canvas.clientWidth || canvas.width / scale);
       const height = Number(canvas.dataset.logicalHeight || canvas.clientHeight || canvas.height / scale);
        const pts = stroke.points;
@@ -4667,7 +4763,7 @@
       const width = Number.parseFloat(pdfCanvas.style.width) || pdfCanvas.clientWidth;
       const height = Number.parseFloat(pdfCanvas.style.height) || pdfCanvas.clientHeight;
       if (!width || !height) return;
-      const scale = window.devicePixelRatio || 1;
+      const scale = canvasOutputScale();
       const targetWidth = Math.max(1, Math.floor(width * scale));
       const targetHeight = Math.max(1, Math.floor(height * scale));
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
@@ -4688,7 +4784,7 @@
 
     function drawTeacherInkStrokes(canvas, strokes) {
       const context = canvas.getContext("2d");
-      const scale = window.devicePixelRatio || 1;
+      const scale = canvasOutputScale();
       const width = Number(canvas.dataset.logicalWidth || canvas.clientWidth || canvas.width / scale);
       const height = Number(canvas.dataset.logicalHeight || canvas.clientHeight || canvas.height / scale);
       context.clearRect(0, 0, canvas.width, canvas.height);
@@ -5096,13 +5192,12 @@
       if (file.size > MAX_PDF_BYTES) { await showModal("PDF 太大", "請先壓縮 PDF 至 20 MB 以內，再重新上傳。", "error"); return; }
        try {
          state.pendingPdf = { name: file.name, mime: "application/pdf", data: await fileToDataUrl(file) };
-          disposePdfiumDocument();
+         disposePdfiumDocument();
+         disposeCachedPdfDocument(state.activeMaterialId);
          state.pdfBytes = new Uint8Array(await file.arrayBuffer());
-          state.pdf = await window.pdfjsLib.getDocument(pdfDocumentOptions(state.pdfBytes)).promise;
+         const pdfJs = await ensurePdfJs();
+         state.pdf = await pdfJs.getDocument(pdfDocumentOptions(state.pdfBytes)).promise;
            if (state.activeMaterialId) {
-             state.materialPdfCache.delete(String(state.activeMaterialId));
-             state.materialPdfBytesCache.delete(String(state.activeMaterialId));
-             state.materialPdfLoadCache.delete(String(state.activeMaterialId));
              state.areas = state.areas.filter(function (area) { return String(area.materialId || legacyMaterialId(state.boardId)) !== String(state.activeMaterialId); });
              state.answerMasks = state.answerMasks.filter(function (mask) { return String(mask.materialId || legacyMaterialId(state.boardId)) !== String(state.activeMaterialId); });
           }
@@ -5913,7 +6008,7 @@
       const parentRect = canvas.parentElement.getBoundingClientRect();
       const width = image.clientWidth || rect.width || parentRect.width;
       const height = image.clientHeight || rect.height || parentRect.height;
-      const scale = window.devicePixelRatio || 1;
+      const scale = canvasOutputScale();
       const targetWidth = Math.max(1, Math.floor(width * scale));
       const targetHeight = Math.max(1, Math.floor(height * scale));
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
@@ -5929,7 +6024,7 @@
     function drawNormalizedStrokes(canvas, strokes) {
       if (!canvas) return;
       const context = canvas.getContext("2d");
-      const scale = window.devicePixelRatio || 1;
+      const scale = canvasOutputScale();
       context.clearRect(0, 0, canvas.width, canvas.height);
       const logicalWidth = Number(canvas.dataset.logicalWidth || canvas.clientWidth || canvas.width / scale);
       const logicalHeight = Number(canvas.dataset.logicalHeight || canvas.clientHeight || canvas.height / scale);
@@ -6079,8 +6174,7 @@
           const nextActiveMaterial = activeMaterial();
           const activePdfChanged = previousActiveMaterial && nextActiveMaterial && String(previousActiveMaterial.pdfFileId || "") !== String(nextActiveMaterial.pdfFileId || "");
           if (activePdfChanged) {
-            state.materialPdfCache.delete(String(nextActiveMaterial.id));
-            state.materialPdfBytesCache.delete(String(nextActiveMaterial.id));
+            disposeCachedPdfDocument(nextActiveMaterial.id);
             await loadMaterialPdf(nextActiveMaterial.id);
             await renderPdfPage();
           }
@@ -7104,7 +7198,6 @@
     async function init() {
       bindStaticEvents();
       setConnectionBadge();
-      refreshSheetLink();
       await runRouteRender();
       flushOutbox();
     }
