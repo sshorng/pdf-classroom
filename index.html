@@ -176,6 +176,11 @@
       border-radius: 24px;
       box-shadow: var(--shadow-soft);
     }
+    .dashboard-compact-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+    .dashboard-compact-head .eyebrow { margin-bottom: 4px; }
+    .dashboard-compact-head h1 { margin-bottom: 0; font-size: clamp(26px, 3vw, 36px); }
+    .dashboard-compact-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+    .portal-compact-head { margin-bottom: 28px; }
     .hero-note { align-self: end; padding: 18px; background: rgba(255,255,255,.66); border: 1px solid rgba(207, 221, 211, .9); border-radius: 16px; }
     .hero-note strong { display: block; margin-bottom: 6px; color: var(--teal-dark); }
     .hero-note p { margin-bottom: 0; color: var(--muted); font-size: 13px; }
@@ -198,6 +203,7 @@
     .announcement-link { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; color: var(--teal-dark); text-decoration: none; }
     .announcement-link:hover .announcement-open { color: var(--accent-dark); }
     .announcement-link strong { overflow: hidden; font-size: 16px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .announcement-description { overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
     .announcement-url { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
     .announcement-open { margin-top: auto; color: var(--accent-dark); font-size: 12px; font-weight: 800; }
     .announcement-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(225, 222, 212, .8); }
@@ -341,6 +347,9 @@
 
     .student-shell { display: grid; gap: 16px; }
     .student-banner { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; padding: 24px 26px; background: linear-gradient(135deg, #315f59, #477c6f); border-radius: 22px; color: #f7fff9; box-shadow: var(--shadow); }
+    .student-home-button { display: grid; flex: 0 0 auto; place-items: center; width: 44px; height: 44px; margin-bottom: 2px; color: #f7fff9; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28); border-radius: 12px; font-size: 22px; line-height: 1; }
+    .student-home-button:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.5); }
+    .student-banner-copy { min-width: 0; flex: 1; }
     .student-banner h1 { margin-bottom: 4px; color: #fffdf5; font-size: clamp(26px, 4vw, 42px); }
     .student-banner .eyebrow { color: #f6c6a5; }
     .student-banner p { max-width: 650px; margin-bottom: 0; color: #d9ebe2; }
@@ -467,8 +476,9 @@
     body.classroom-mode .ink-controls input[type="range"] { width: 72px; }
     body.classroom-mode .classroom-toolbar-title button { min-height: 36px; }
     body.student-mode .student-shell { position: relative; display: flex; flex-direction: column; width: 100%; height: 100vh; gap: 0; }
-    body.student-mode .student-banner { flex: 0 0 auto; align-items: center; min-height: 58px; padding: 7px 14px; border-radius: 0; }
-    body.student-mode .student-banner > div:first-child > p { display: none; }
+    body.student-mode .student-banner { flex: 0 0 auto; align-items: center; flex-direction: row; min-height: 58px; padding: 7px 14px; border-radius: 0; }
+    body.student-mode .student-home-button { width: 40px; height: 40px; margin: 0 2px 0 0; }
+    body.student-mode .student-banner-copy > p { display: none; }
     body.student-mode .student-banner h1 { margin: 0; font-size: 20px; line-height: 1.2; }
     body.student-mode .student-identity { display: flex; align-items: center; gap: 8px; min-width: 190px; padding: 4px 8px; background: rgba(255,255,255,.1); border: 0; }
     body.student-mode .student-identity label { margin: 0; white-space: nowrap; }
@@ -559,6 +569,8 @@
       .brand span { display: none; }
       .connection-badge { max-width: 145px; overflow: hidden; text-overflow: ellipsis; }
       .page-intro, .student-banner, .workspace-head, .review-meta { align-items: stretch; flex-direction: column; }
+      .dashboard-compact-head { align-items: flex-start; flex-direction: column; }
+      .dashboard-compact-actions { justify-content: flex-start; }
       .page-actions, .workspace-actions { justify-content: flex-start; }
       .student-identity { min-width: 0; width: 100%; }
       .pdf-scroll { min-height: 480px; padding: 16px 10px 26px; }
@@ -604,6 +616,7 @@
         <span class="connection-badge" id="connectionBadge">尚未連線</span>
         <button class="icon-button" id="__sheetLink" type="button" title="開啟試算表">▦</button>
         <button class="top-button" id="settingsButton" type="button">設定</button>
+        <button class="top-button" id="teacherEntryButton" type="button">教師入口</button>
       </div>
     </header>
 
@@ -682,7 +695,7 @@
 
     const state = {
       demo: localStorage.getItem(APP_KEY + "demo") === "1",
-      view: "manager",
+      view: "portal",
       boardId: "",
       board: null,
       boards: [],
@@ -756,6 +769,7 @@
       reviewShape: "arrow",
       reviewZoom: 1,
       adminToken: localStorage.getItem(APP_KEY + "admin_token") || "",
+      teacherAuthenticated: Boolean(localStorage.getItem(APP_KEY + "admin_token")),
       pollTimer: null,
       lastStudentSubmissionPollAt: 0,
       lastReviewSubmissionPollAt: 0,
@@ -776,6 +790,7 @@
     let pdfRenderQueue = Promise.resolve();
     let activePdfRenderTask = null;
     let routeLoadGeneration = 0;
+    let routeRenderPromise = Promise.resolve();
     let announcementRequestSequence = 0;
 
     function pdfDocumentOptions(bytes) {
@@ -992,6 +1007,7 @@
         return Object.assign({}, item, {
           id: String(item && item.id || ""),
           title: String(item && item.title || "").trim().slice(0, 100),
+          description: String(item && item.description || "").trim().slice(0, 160),
           url: String(item && item.url || "").trim().slice(0, 2048),
           pinned: announcementIsPinned(item && item.pinned),
           order: Math.max(1, Math.floor(Number(item && item.order) || index + 1)),
@@ -1001,6 +1017,29 @@
         });
       }).filter(function (item) { return item.id && item.title && item.url && item.status === "啟用"; }).sort(function (a, b) {
         return Number(b.pinned) - Number(a.pinned) || a.order - b.order || String(b.updatedAt).localeCompare(String(a.updatedAt)) || a.id.localeCompare(b.id);
+      });
+    }
+
+    function publicBoardSummary(board) {
+      return {
+        id: String(board && board.id || ""),
+        name: String(board && board.name || "未命名教材版面"),
+        description: String(board && board.description || ""),
+        pdfFileName: String(board && board.pdfFileName || ""),
+        materialCount: Math.max(0, Number(board && board.materialCount) || normalizeMaterials(board, board && board.materials).length),
+        status: String(board && board.status || "啟用"),
+        createdAt: String(board && board.createdAt || ""),
+        updatedAt: String(board && board.updatedAt || "")
+      };
+    }
+
+    function sortBoardsByUpdatedAt(rows) {
+      return (Array.isArray(rows) ? rows : []).slice().sort(function (a, b) {
+        const aTime = Date.parse(String(a && a.updatedAt || ""));
+        const bTime = Date.parse(String(b && b.updatedAt || ""));
+        const aValue = Number.isFinite(aTime) ? aTime : 0;
+        const bValue = Number.isFinite(bTime) ? bTime : 0;
+        return bValue - aValue || String(b && b.updatedAt || "").localeCompare(String(a && a.updatedAt || "")) || String(a && a.id || "").localeCompare(String(b && b.id || ""));
       });
     }
 
@@ -1277,9 +1316,13 @@
     function bindStaticEvents() {
       document.getElementById("brandHome").addEventListener("click", function (event) {
         event.preventDefault();
-        goView("manager");
+        goView("portal");
       });
       document.getElementById("settingsButton").addEventListener("click", openSettingsModal);
+      document.getElementById("teacherEntryButton").addEventListener("click", function () {
+        if (state.teacherAuthenticated || state.adminToken) logoutTeacher();
+        else goView("manager");
+      });
       document.querySelector("[data-close-settings]").addEventListener("click", closeSettingsModal);
       document.getElementById("settingsModal").addEventListener("click", function (event) {
         if (event.target.id === "settingsModal") closeSettingsModal();
@@ -1350,7 +1393,7 @@
         if (state.view === "review" || state.view === "student") pollClassroomView();
         if (navigator.onLine) flushOutbox();
       });
-      window.addEventListener("popstate", renderRoute);
+      window.addEventListener("popstate", runRouteRender);
       document.addEventListener("selectstart", function (event) {
         if (!event.target.closest("input, textarea, [contenteditable='true']")) {
           event.preventDefault();
@@ -1392,7 +1435,9 @@
 
     async function refreshCurrentView() {
       try {
-        if (state.view === "manager") {
+        if (state.view === "portal") {
+          await renderPortalView(routeLoadGeneration);
+        } else if (state.view === "manager") {
           const result = await managerApi("listBoards", {});
           for (const board of result.data || []) await cacheBoardLocally(board);
           await pruneStaleLocalBoards(result.data || []);
@@ -1402,7 +1447,6 @@
           await loadBoardContext(state.boardId);
           await loadStudentSubmissions();
           await loadClassroomSync();
-          await loadAnnouncements();
           renderStudentAreaList();
           renderZones();
         } else if (state.view === "review" && state.boardId) {
@@ -1432,9 +1476,9 @@
 
     function announcementSurfaceHtml(surface, canManage, compact) {
       const title = surface === "student" ? "課堂公告" : "公告與常用連結";
-      const description = surface === "student" ? "教師整理的課堂入口，點擊後會在新分頁開啟。" : "把學生常用的入口集中在這裡，少一點尋找，多一點專心。";
+      const description = "";
       const manageButton = canManage ? "<button class=\"button small primary\" data-announcement-add type=\"button\">＋ 新增公告</button>" : "";
-      return "<section class=\"announcement-surface" + (compact ? " announcement-surface-compact" : "") + "\" data-announcement-surface=\"" + surface + "\"><div class=\"announcement-heading\"><div><p class=\"eyebrow\">CLASSROOM LINKS</p><h2>" + title + "</h2><p>" + description + "</p></div>" + manageButton + "</div><div class=\"announcement-list\" id=\"announcementList-" + surface + "\"><div class=\"inline-message\">正在讀取公告……</div></div></section>";
+      return "<section class=\"announcement-surface" + (compact ? " announcement-surface-compact" : "") + "\" data-announcement-surface=\"" + surface + "\"><div class=\"announcement-heading\"><div><p class=\"eyebrow\">CLASSROOM LINKS</p><h2>" + title + "</h2>" + description + "</div>" + manageButton + "</div><div class=\"announcement-list\" id=\"announcementList-" + surface + "\"><div class=\"inline-message\">正在讀取公告……</div></div></section>";
     }
 
     function renderAnnouncementList(surface) {
@@ -1456,7 +1500,8 @@
         const canMoveUp = canManage && previous && announcementIsPinned(previous) === announcementIsPinned(announcement);
         const canMoveDown = canManage && next && announcementIsPinned(next) === announcementIsPinned(announcement);
         const controls = canManage ? "<div class=\"announcement-card-actions\"><button class=\"area-action-button\" data-announcement-up=\"" + escapeHtml(announcement.id) + "\" type=\"button\" title=\"上移\" aria-label=\"上移\"" + (canMoveUp ? "" : " disabled") + ">↑</button><button class=\"area-action-button\" data-announcement-down=\"" + escapeHtml(announcement.id) + "\" type=\"button\" title=\"下移\" aria-label=\"下移\"" + (canMoveDown ? "" : " disabled") + ">↓</button><button class=\"area-action-button\" data-announcement-edit=\"" + escapeHtml(announcement.id) + "\" type=\"button\" title=\"編輯\" aria-label=\"編輯\">✎</button><button class=\"area-action-button danger\" data-announcement-delete=\"" + escapeHtml(announcement.id) + "\" type=\"button\" title=\"刪除\" aria-label=\"刪除\">×</button></div>" : "";
-        return "<article class=\"announcement-card" + (announcement.pinned ? " is-pinned" : "") + "\"><div class=\"announcement-card-top\"><span class=\"announcement-tag\">" + (announcement.pinned ? "置頂" : "常用連結") + "</span><span class=\"announcement-time\">" + escapeHtml(formatTime(announcement.updatedAt)) + "</span></div><a class=\"announcement-link\" href=\"" + escapeHtml(announcement.url) + "\" target=\"_blank\" rel=\"noopener noreferrer\"><strong>" + escapeHtml(announcement.title) + "</strong><span class=\"announcement-url\">" + escapeHtml(shortAnnouncementUrl(announcement.url)) + "</span><span class=\"announcement-open\">開啟連結 ↗</span></a>" + controls + "</article>";
+         const description = announcement.description ? "<span class=\"announcement-description\">" + escapeHtml(announcement.description) + "</span>" : "";
+         return "<article class=\"announcement-card" + (announcement.pinned ? " is-pinned" : "") + "\"><div class=\"announcement-card-top\"><span class=\"announcement-tag\">" + (announcement.pinned ? "置頂" : "常用連結") + "</span><span class=\"announcement-time\">" + escapeHtml(formatTime(announcement.updatedAt)) + "</span></div><a class=\"announcement-link\" href=\"" + escapeHtml(announcement.url) + "\" target=\"_blank\" rel=\"noopener noreferrer\"><strong>" + escapeHtml(announcement.title) + "</strong>" + description + "<span class=\"announcement-url\">" + escapeHtml(shortAnnouncementUrl(announcement.url)) + "</span><span class=\"announcement-open\">開啟連結 ↗</span></a>" + controls + "</article>";
       }).join("");
     }
 
@@ -1576,12 +1621,13 @@
     function openAnnouncementForm(announcement) {
       const current = announcement || {};
       const checked = current.pinned ? " checked" : "";
-      openFormModal(current.id ? "編輯公告連結" : "新增公告連結", "<form><div class=\"field\"><label for=\"announcementTitleField\">公告標題</label><input id=\"announcementTitleField\" name=\"title\" maxlength=\"100\" required value=\"" + escapeHtml(current.title || "") + "\" placeholder=\"例如：線上字典、學習影片、作業繳交區\"></div><div class=\"field\"><label for=\"announcementUrlField\">連結網址</label><input id=\"announcementUrlField\" name=\"url\" type=\"url\" maxlength=\"2048\" required value=\"" + escapeHtml(current.url || "") + "\" placeholder=\"https://example.com\"><p class=\"helper\">只接受以 http:// 或 https:// 開頭的網址，開啟時會另開分頁。</p></div><label class=\"announcement-checkbox\"><input name=\"pinned\" type=\"checkbox\"" + checked + "><span><strong>置頂這則公告</strong><small>置頂項目會固定排在一般連結前面。</small></span></label></form>", current.id ? "儲存修改" : "新增公告", async function (formData) {
+      openFormModal(current.id ? "編輯公告連結" : "新增公告連結", "<form><div class=\"field\"><label for=\"announcementTitleField\">公告標題</label><input id=\"announcementTitleField\" name=\"title\" maxlength=\"100\" required value=\"" + escapeHtml(current.title || "") + "\" placeholder=\"例如：線上字典、學習影片、作業繳交區\"></div><div class=\"field\"><label for=\"announcementDescriptionField\">簡要說明（選填）</label><input id=\"announcementDescriptionField\" name=\"description\" maxlength=\"160\" value=\"" + escapeHtml(current.description || "") + "\" placeholder=\"例如：查字音、查成語，方便學生使用\"><p class=\"helper\">留白也可以，內容會顯示在公告標題下方。</p></div><div class=\"field\"><label for=\"announcementUrlField\">連結網址</label><input id=\"announcementUrlField\" name=\"url\" type=\"url\" maxlength=\"2048\" required value=\"" + escapeHtml(current.url || "") + "\" placeholder=\"https://example.com\"><p class=\"helper\">只接受以 http:// 或 https:// 開頭的網址，開啟時會另開分頁。</p></div><label class=\"announcement-checkbox\"><input name=\"pinned\" type=\"checkbox\"" + checked + "><span><strong>置頂這則公告</strong><small>置頂項目會固定排在一般連結前面。</small></span></label></form>", current.id ? "儲存修改" : "新增公告", async function (formData) {
         const title = String(formData.get("title") || "").trim();
         if (!title) throw new Error("請填寫公告標題。");
         if (title.length > 100) throw new Error("公告標題不可超過 100 個字元。");
+        const description = String(formData.get("description") || "").trim().slice(0, 160);
         const url = normalizeAnnouncementUrl(formData.get("url"));
-        const payload = { title: title, url: url, pinned: formData.get("pinned") === "on" };
+        const payload = { title: title, description: description, url: url, pinned: formData.get("pinned") === "on" };
         if (current.id) {
           payload.id = current.id;
           await announcementApi("updateAnnouncement", payload);
@@ -1714,7 +1760,7 @@
       const indicator = document.getElementById("pullRefreshIndicator");
       if (!indicator) return;
       bindPullToRefreshTarget(window, function (event) {
-        if (state.view !== "manager") return false;
+        if (state.view !== "manager" && state.view !== "portal") return false;
         const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
         const target = event.target;
         if (target && target.closest && target.closest(".modal-card, .review-panel, textarea, input, select, .pdf-scroll, .classroom-pdf-panel, .student-workspace")) return false;
@@ -1997,13 +2043,14 @@
       if (action === "createAnnouncement") {
         const title = String(data.title || "").trim().slice(0, 100);
         if (!title) throw new Error("請填寫公告標題。");
+        const description = String(data.description || "").trim().slice(0, 160);
         const url = normalizeAnnouncementUrl(data.url);
         const id = String(data.id || createId("AN"));
         const existing = await localGet("announcements", id);
         if (existing) return localAnnouncementResponse(existing);
         const rows = normalizeAnnouncements(await localAll("announcements"));
         const now = new Date().toISOString();
-        const announcement = { id: id, title: title, url: url, pinned: announcementIsPinned(data.pinned), order: Math.max(1, Math.floor(Number(data.order) || rows.length + 1)), status: "啟用", createdAt: now, updatedAt: now };
+        const announcement = { id: id, title: title, description: description, url: url, pinned: announcementIsPinned(data.pinned), order: Math.max(1, Math.floor(Number(data.order) || rows.length + 1)), status: "啟用", createdAt: now, updatedAt: now };
         await localPut("announcements", announcement);
         return localAnnouncementResponse(announcement);
       }
@@ -2017,6 +2064,7 @@
           announcement.title = String(data.title || "").trim().slice(0, 100);
           if (!announcement.title) throw new Error("公告標題不可為空白。");
         }
+        if (data.description !== undefined) announcement.description = String(data.description || "").trim().slice(0, 160);
         if (data.url !== undefined) announcement.url = normalizeAnnouncementUrl(data.url);
         if (data.pinned !== undefined) announcement.pinned = announcementIsPinned(data.pinned);
         if (data.order !== undefined) announcement.order = Math.max(1, Math.floor(Number(data.order) || existing.order || 1));
@@ -2098,6 +2146,7 @@
         await localPut("classroomState", classroomState);
         return { ok: true, state: classroomState };
       }
+      if (action === "listPublicBoards") return { ok: true, data: (await localAll("boards")).filter(function (board) { return board.status !== "封存"; }).map(publicBoardSummary) };
       if (action === "listBoards") return { ok: true, data: (await localAll("boards")).filter(function (board) { return board.status !== "封存"; }) };
       if (action === "getBoard") {
         const board = await localGet("boards", data.boardId);
@@ -2425,6 +2474,11 @@
       return gasPost(action, payload || {});
     }
 
+    async function publicApi(action, payload) {
+      if (state.demo) return localRequest(action, payload || {});
+      return gasGet(action, payload || {});
+    }
+
     function isBoardMutationAction(action) {
       return ["createBoard", "updateBoard", "archiveBoard", "deleteBoard", "createMaterial", "updateMaterial", "deleteMaterial"].indexOf(action) > -1;
     }
@@ -2563,11 +2617,13 @@
     }
 
     async function promptAdminLogin() {
-      const result = await openFormModal("教師管理驗證", "<form><div class=\"field\"><label for=\"adminPasswordField\">管理密語</label><input id=\"adminPasswordField\" name=\"password\" type=\"password\" autocomplete=\"current-password\" required></div><p class=\"helper\">若「系統設定」尚未填入 AdminPassword，系統會直接建立暫時管理工作階段。</p></form>", "驗證", async function (formData) {
+      const result = await openFormModal("教師管理驗證", "<form><div class=\"field\"><label for=\"adminPasswordField\">管理密語</label><input id=\"adminPasswordField\" name=\"password\" type=\"password\" autocomplete=\"current-password\" required></div><p class=\"helper\">教師管理密語由「系統設定」工作表的 AdminPassword 管理。</p></form>", "驗證", async function (formData) {
         const response = await gasPost("verifyAdmin", { password: formData.get("password") || "", clientId: state.clientId });
-        state.adminToken = response.token || "";
-        if (state.adminToken) localStorage.setItem(APP_KEY + "admin_token", state.adminToken);
-        return true;
+          state.adminToken = response.token || "";
+          if (state.adminToken) localStorage.setItem(APP_KEY + "admin_token", state.adminToken);
+          state.teacherAuthenticated = Boolean(state.adminToken);
+          updateTopbarForRoute(state.view);
+          return true;
       });
       return result === true;
     }
@@ -2761,27 +2817,108 @@
       return state.board;
     }
 
+    function isTeacherView(view) {
+      return ["manager", "editor", "review"].indexOf(view) > -1;
+    }
+
+    function updateTopbarForRoute(view) {
+      const teacherButton = document.getElementById("teacherEntryButton");
+      const sheetLink = document.getElementById("__sheetLink");
+      const teacherVisible = view === "portal" || view === "manager";
+      const signedIn = Boolean(state.teacherAuthenticated || state.adminToken);
+      if (teacherButton) {
+        teacherButton.hidden = !teacherVisible;
+        teacherButton.textContent = signedIn ? "登出" : "教師入口";
+        teacherButton.title = signedIn ? "登出教師工作階段" : "開啟教師入口";
+      }
+      if (sheetLink) sheetLink.hidden = view === "portal";
+    }
+
+    function logoutTeacher() {
+      state.adminToken = "";
+      state.teacherAuthenticated = false;
+      localStorage.removeItem(APP_KEY + "admin_token");
+      updateTopbarForRoute("portal");
+      goView("portal");
+      showToast("已登出教師工作階段。", "success");
+    }
+
+    async function ensureTeacherAccess() {
+      if (state.demo) {
+        state.teacherAuthenticated = true;
+        updateTopbarForRoute(state.view);
+        return true;
+      }
+      if (!GAS_URL) {
+        await showModal("尚未設定教師連線", "請先在右上角「設定」填入 GAS Web App 網址，再開啟教師入口。", "error");
+        return false;
+      }
+      if (state.adminToken) {
+        try {
+          const response = await gasPost("verifyAdmin", { adminToken: state.adminToken, clientId: state.clientId });
+          if (response && response.token) {
+            state.adminToken = response.token;
+            localStorage.setItem(APP_KEY + "admin_token", state.adminToken);
+          }
+          state.teacherAuthenticated = true;
+          updateTopbarForRoute(state.view);
+          return true;
+        } catch (error) {
+          if (error.network) {
+            state.teacherAuthenticated = true;
+            updateTopbarForRoute(state.view);
+            return true;
+          }
+          state.adminToken = "";
+          state.teacherAuthenticated = false;
+          localStorage.removeItem(APP_KEY + "admin_token");
+        }
+      }
+      const authenticated = await promptAdminLogin();
+      state.teacherAuthenticated = authenticated;
+      updateTopbarForRoute(state.view);
+      return authenticated;
+    }
+
+    function redirectToPortal() {
+      const url = new URL(window.location.href);
+      const config = url.searchParams.get("config");
+      url.search = "";
+      if (config) url.searchParams.set("config", config);
+      window.history.replaceState({}, "", url);
+      return runRouteRender();
+    }
+
+    function runRouteRender() {
+      routeRenderPromise = renderRoute();
+      return routeRenderPromise;
+    }
+
     function goView(view, boardId) {
+      const targetView = ["portal", "manager", "editor", "review", "student"].indexOf(view) > -1 ? view : "portal";
       const targetBoardId = String(boardId || "");
       const currentRoute = readRoute();
-      if (currentRoute.view === view && String(currentRoute.boardId || "") === targetBoardId) return;
-      state.view = view;
+      if (currentRoute.view === targetView && String(currentRoute.boardId || "") === targetBoardId) return;
+      state.view = targetView;
       state.boardId = targetBoardId;
       const url = new URL(window.location.href);
       url.search = "";
-      if (view === "student") url.searchParams.set("board", boardId);
-      if (view === "editor" || view === "review") {
-        url.searchParams.set("view", view);
-        url.searchParams.set("board", boardId);
+      if (targetView === "student") {
+        url.searchParams.set("view", "student");
+        url.searchParams.set("board", targetBoardId);
+      }
+      if (targetView === "manager" || targetView === "editor" || targetView === "review") {
+        url.searchParams.set("view", targetView);
+        if (targetBoardId) url.searchParams.set("board", targetBoardId);
       }
       window.history.pushState({}, "", url);
-      renderRoute();
+      runRouteRender();
     }
 
     function readRoute() {
       const params = new URLSearchParams(window.location.search);
       const boardId = params.get("board") || "";
-      const view = params.get("view") || (boardId ? "student" : "manager");
+      const view = params.get("view") || (boardId ? "student" : "portal");
       return { view: view, boardId: boardId };
     }
 
@@ -2792,34 +2929,89 @@
       cancelClassroomSyncRequests();
       if (state.pollTimer) { window.clearInterval(state.pollTimer); state.pollTimer = null; }
       const route = readRoute();
-      state.view = ["manager", "editor", "review", "student"].indexOf(route.view) > -1 ? route.view : "manager";
+      state.view = ["portal", "manager", "editor", "review", "student"].indexOf(route.view) > -1 ? route.view : "portal";
       state.boardId = route.boardId;
+      if (!state.boardId && ["student", "editor", "review"].indexOf(state.view) > -1) state.view = "portal";
+      if (state.view === "portal") state.boardId = "";
       if (state.view !== "review") state.drawingZone = false;
-       document.body.classList.toggle("classroom-mode", state.view === "review" && Boolean(state.boardId));
-       document.body.classList.toggle("student-mode", state.view === "student" && Boolean(state.boardId));
-       document.body.classList.toggle("editor-mode", state.view === "editor" && Boolean(state.boardId));
+      document.body.classList.toggle("classroom-mode", state.view === "review" && Boolean(state.boardId));
+      document.body.classList.toggle("student-mode", state.view === "student" && Boolean(state.boardId));
+      document.body.classList.toggle("editor-mode", state.view === "editor" && Boolean(state.boardId));
+      updateTopbarForRoute(state.view);
       setConnectionBadge();
-       setOfflineNote(!navigator.onLine);
-       try {
-         if (state.view === "student" && state.boardId) await renderStudentView(state.boardId, generation);
-         else if (state.view === "editor" && state.boardId) await renderEditorView(state.boardId, generation);
-         else if (state.view === "review" && state.boardId) await renderReviewView(state.boardId, generation);
-         else await renderManagerView(generation);
-       } catch (error) {
-         if (!isCurrentRouteLoad(generation, state.view, state.boardId)) return;
-         document.getElementById("appMain").innerHTML = "<div class=\"empty-state\"><div class=\"empty-icon\">!</div><strong>頁面暫時無法開啟</strong><p>" + escapeHtml(error.message || "請稍後再試。") + "</p><button class=\"button primary\" id=\"retryButton\" type=\"button\">重新載入</button></div>";
-         document.getElementById("retryButton").addEventListener("click", renderRoute);
-       }
-     }
+      setOfflineNote(!navigator.onLine);
+      try {
+        if (isTeacherView(state.view)) {
+          const authenticated = await ensureTeacherAccess();
+          if (!authenticated) {
+            if (isCurrentRouteLoad(generation, state.view, state.boardId)) return redirectToPortal();
+            return;
+          }
+        }
+        if (state.view === "portal") await renderPortalView(generation);
+        else if (state.view === "manager") await renderManagerView(generation);
+        else if (state.view === "student" && state.boardId) await renderStudentView(state.boardId, generation);
+        else if (state.view === "editor" && state.boardId) await renderEditorView(state.boardId, generation);
+        else if (state.view === "review" && state.boardId) await renderReviewView(state.boardId, generation);
+        else await renderPortalView(generation);
+      } catch (error) {
+        if (!isCurrentRouteLoad(generation, state.view, state.boardId)) return;
+        document.getElementById("appMain").innerHTML = "<div class=\"empty-state\"><div class=\"empty-icon\">!</div><strong>頁面暫時無法開啟</strong><p>" + escapeHtml(error.message || "請稍後再試。") + "</p><button class=\"button primary\" id=\"retryButton\" type=\"button\">重新載入</button></div>";
+        document.getElementById("retryButton").addEventListener("click", runRouteRender);
+      }
+    }
+
+    async function renderPortalView(generation) {
+      const main = document.getElementById("appMain");
+      state.boards = [];
+      main.innerHTML = "<section class=\"dashboard-compact-head portal-compact-head\"><div><p class=\"eyebrow\">STUDENT LIBRARY</p><h1>課堂講義入口</h1></div></section><div id=\"portalAnnouncementMount\"></div><div class=\"section-heading\"><div><h2>開放中的教材版面</h2><p>點選版面後即可進入學生頁。</p></div><span class=\"meta-chip\" id=\"portalBoardCount\">載入中</span></div><div class=\"offline-note\">目前無法連線，先顯示這台裝置保存的版面；重新連線後可取得最新資料。</div><div class=\"board-grid\" id=\"portalBoardGrid\"><div class=\"loading-wrap loading\">正在讀取教材版面</div></div>";
+      document.getElementById("portalAnnouncementMount").innerHTML = announcementSurfaceHtml("portal", false, false);
+      renderAnnouncementSurfaces();
+      await loadAnnouncements();
+      if (!isCurrentRouteLoad(generation, "portal", "")) return;
+
+      const localBoards = (await localAll("boards")).filter(function (board) { return board.status !== "封存"; }).map(publicBoardSummary);
+      if (localBoards.length) {
+        state.boards = localBoards;
+        renderPublicBoardCards();
+      }
+      try {
+        const result = await publicApi("listPublicBoards", {});
+        if (!isCurrentRouteLoad(generation, "portal", "")) return;
+        state.boards = (result.data || []).map(publicBoardSummary).filter(function (board) { return board.status === "啟用"; });
+        renderPublicBoardCards();
+      } catch (error) {
+        if (!localBoards.length) renderPublicBoardCards();
+        setOfflineNote(true);
+      }
+    }
+
+    function renderPublicBoardCards() {
+      const grid = document.getElementById("portalBoardGrid");
+      const count = document.getElementById("portalBoardCount");
+      if (!grid) return;
+      state.boards = sortBoardsByUpdatedAt(state.boards);
+      if (count) count.textContent = state.boards.length + " 個版面";
+      if (!state.boards.length) {
+        grid.innerHTML = "<div class=\"empty-state\"><div class=\"empty-icon\">卷</div><strong>目前沒有開放中的教材版面</strong><p>教師開放教材後，版面會出現在這裡。</p></div>";
+        return;
+      }
+      grid.innerHTML = state.boards.map(function (board, index) {
+        const letter = String(index + 1).padStart(2, "0");
+        const materialLabel = board.materialCount > 1 ? board.materialCount + " 份教材" : (board.pdfFileName || "教材準備中");
+        return "<article class=\"board-card\"><div class=\"board-card-top\"><div class=\"board-mark\">" + letter + "</div></div><h3>" + escapeHtml(board.name) + "</h3><p>" + escapeHtml(board.description || "教師尚未寫入版面說明。") + "</p><div class=\"board-meta\"><span class=\"meta-chip\">" + escapeHtml(materialLabel) + "</span><span class=\"meta-chip\">更新於 " + escapeHtml(formatTime(board.updatedAt)) + "</span></div><div class=\"board-actions\"><button class=\"button small primary\" data-public-student-board=\"" + escapeHtml(board.id) + "\" type=\"button\">開啟學生版</button></div></article>";
+      }).join("");
+      grid.querySelectorAll("[data-public-student-board]").forEach(function (button) {
+        button.addEventListener("click", function () { goView("student", button.dataset.publicStudentBoard); });
+      });
+    }
 
     async function renderManagerView(generation) {
       const main = document.getElementById("appMain");
-      main.innerHTML = "<section class=\"dashboard-hero\"><div><p class=\"eyebrow\">PDF × CLASSROOM RESPONSE</p><h1>讓每一頁講義，<br>都能收到學生的回應。</h1><p class=\"lede\">建立不同課次的教材版面，圈出問答區，學生用照片或文字作答，教師在課堂中直接批改。</p><div class=\"page-actions\" style=\"justify-content:flex-start;margin-top:22px;\"><button class=\"button primary\" id=\"createBoardButton\" type=\"button\">＋ 建立教材版面</button><button class=\"button subtle\" id=\"openSettingsFromHero\" type=\"button\">連線設定</button></div></div><div class=\"hero-note\"><strong>一份教材，一個獨立空間</strong><p>每個版面都有自己的 PDF、問答區與學生作答，不會和其他課次混在一起。</p></div></section><div class=\"section-heading\"><div><h2>我的教材版面</h2><p>從這裡管理不同課次與批改進度。</p></div><span class=\"meta-chip\" id=\"boardCount\">載入中</span></div><div class=\"offline-note\">目前離線，已儲存的本機資料仍可操作；新的照片與批改會在恢復連線後補傳。</div><div class=\"board-grid\" id=\"boardGrid\"><div class=\"loading-wrap loading\">正在讀取教材版面</div></div>";
-      const managerLead = main.querySelector(".dashboard-hero .lede");
-      if (managerLead) managerLead.textContent = "建立不同課次的教材版面，放置問答圖釘；上課時用全螢幕 PDF 直接畫記，點圖釘查看學生作答。";
+      main.innerHTML = "<section class=\"dashboard-compact-head\"><div><p class=\"eyebrow\">TEACHER WORKSPACE</p><h1>我的教材版面</h1></div><div class=\"dashboard-compact-actions\"><span class=\"meta-chip\" id=\"boardCount\">載入中</span><button class=\"button primary\" id=\"createBoardButton\" type=\"button\">＋ 建立教材版面</button><button class=\"button subtle\" id=\"openSettingsFromHero\" type=\"button\">連線設定</button></div></section><div class=\"offline-note\">目前離線，已儲存的本機資料仍可操作；新的照片與批改會在恢復連線後補傳。</div><div class=\"board-grid\" id=\"boardGrid\"><div class=\"loading-wrap loading\">正在讀取教材版面</div></div>";
       document.getElementById("createBoardButton").addEventListener("click", function () { openBoardForm(); });
       document.getElementById("openSettingsFromHero").addEventListener("click", openSettingsModal);
-      const announcementAnchor = main.querySelector(".dashboard-hero");
+      const announcementAnchor = main.querySelector(".dashboard-compact-head");
       if (announcementAnchor) announcementAnchor.insertAdjacentHTML("afterend", announcementSurfaceHtml("manager", true, false));
       renderAnnouncementSurfaces();
       await loadAnnouncements();
@@ -2853,6 +3045,7 @@
     function renderBoardCards() {
       const grid = document.getElementById("boardGrid");
       const count = document.getElementById("boardCount");
+      state.boards = sortBoardsByUpdatedAt(state.boards);
       if (count) count.textContent = state.boards.length + " 個版面";
       if (!state.boards.length) {
         grid.innerHTML = "<div class=\"empty-state\"><div class=\"empty-icon\">卷</div><strong>還沒有教材版面</strong><p>先建立一個課次，接著上傳 PDF 並在頁面上圈出問答區。</p><button class=\"button primary\" id=\"emptyCreateButton\" type=\"button\">建立第一個版面</button></div>";
@@ -5245,12 +5438,8 @@
        await loadBoardContext(boardId);
        if (!isCurrentRouteLoad(generation, "student", boardId)) return;
        const studentMaterialId = String(state.activeMaterialId || "");
-        main.innerHTML = "<section class=\"student-shell\"><div class=\"student-banner\"><div><p class=\"eyebrow\">STUDENT RESPONSE</p><h1>" + escapeHtml(state.board.name) + "</h1><p>點擊 PDF 上的問答區，拍照或輸入文字完成作答。</p></div><div class=\"student-identity\"><label for=\"studentNicknameField\">你的暱稱</label><input id=\"studentNicknameField\" maxlength=\"40\" placeholder=\"例如：第一組\" value=\"" + escapeHtml(state.nickname) + "\"></div></div><div class=\"offline-note\">目前離線，送出的答案會先保留在這台裝置，網路恢復後自動補傳。</div><div class=\"workspace-shell student-workspace\"><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentPrevPage\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"studentNextPage\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentZoomOut\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"studentZoomIn\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"studentFit\" type=\"button\">適合</button></div></div><div class=\"pdf-scroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"studentProgress\">尚未作答</span></div><div class=\"area-list\" id=\"studentAreaList\"></div><div class=\"answer-panel\" id=\"answerPanel\"><div class=\"answer-panel-empty\"><div><strong>從 PDF 選一個問答區</strong><span>你的答案會和這份教材版面分開保存。</span></div></div></div></aside></div></div></div></section>";
-        const studentSidebarMount = main.querySelector(".student-workspace .workspace-sidebar");
-        if (studentSidebarMount) studentSidebarMount.insertAdjacentHTML("afterbegin", announcementSurfaceHtml("student", false, true));
-        renderAnnouncementSurfaces();
-        await loadAnnouncements();
-        const studentSidebar = main.querySelector(".student-workspace .workspace-sidebar");
+         main.innerHTML = "<section class=\"student-shell\"><div class=\"student-banner\"><button class=\"student-home-button\" id=\"studentHomeButton\" type=\"button\" title=\"回首頁\" aria-label=\"回首頁\">⌂</button><div class=\"student-banner-copy\"><p class=\"eyebrow\">STUDENT RESPONSE</p><h1>" + escapeHtml(state.board.name) + "</h1><p>點擊 PDF 上的問答區，拍照或輸入文字完成作答。</p></div><div class=\"student-identity\"><label for=\"studentNicknameField\">你的暱稱</label><input id=\"studentNicknameField\" maxlength=\"40\" placeholder=\"例如：第一組\" value=\"" + escapeHtml(state.nickname) + "\"></div></div><div class=\"offline-note\">目前離線，送出的答案會先保留在這台裝置，網路恢復後自動補傳。</div><div class=\"workspace-shell student-workspace\"><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentPrevPage\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"studentNextPage\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentZoomOut\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"studentZoomIn\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"studentFit\" type=\"button\">適合</button></div></div><div class=\"pdf-scroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"studentProgress\">尚未作答</span></div><div class=\"area-list\" id=\"studentAreaList\"></div><div class=\"answer-panel\" id=\"answerPanel\"><div class=\"answer-panel-empty\"><div><strong>從 PDF 選一個問答區</strong><span>你的答案會和這份教材版面分開保存。</span></div></div></div></aside></div></div></div></section>";
+         const studentSidebar = main.querySelector(".student-workspace .workspace-sidebar");
        const studentAreaList = document.getElementById("studentAreaList");
        const studentAnswerPanel = document.getElementById("answerPanel");
        if (studentSidebar && studentAreaList && studentAnswerPanel) studentSidebar.insertBefore(studentAnswerPanel, studentAreaList);
@@ -5270,9 +5459,10 @@
       startClassroomPolling();
     }
 
-     function bindStudentEvents() {
-       ensureAnswerMaskControls("student");
-       const nicknameField = document.getElementById("studentNicknameField");
+      function bindStudentEvents() {
+        ensureAnswerMaskControls("student");
+        document.getElementById("studentHomeButton").addEventListener("click", function () { goView("portal"); });
+        const nicknameField = document.getElementById("studentNicknameField");
       nicknameField.addEventListener("input", function () {
         state.nickname = nicknameField.value.slice(0, 40);
         localStorage.setItem(APP_KEY + "nickname", state.nickname);
@@ -6799,7 +6989,7 @@
       bindStaticEvents();
       setConnectionBadge();
       refreshSheetLink();
-      await renderRoute();
+      await runRouteRender();
       flushOutbox();
     }
 

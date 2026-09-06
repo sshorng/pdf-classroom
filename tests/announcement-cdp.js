@@ -57,7 +57,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
       invalidUrlRejected = true;
     }
 
-    await localRequest("createAnnouncement", { id: ids[0], title: "一般入口", url: "https://example.com/normal", pinned: false, order: 1 });
+    await localRequest("createAnnouncement", { id: ids[0], title: "一般入口", description: "提供學生查閱資料。", url: "https://example.com/normal", pinned: false, order: 1 });
     await localRequest("createAnnouncement", { id: ids[1], title: "置頂入口", url: "http://example.com/pinned", pinned: true, order: 2 });
     await localRequest("createAnnouncement", { id: ids[2], title: "第二個置頂入口", url: "https://example.com/second", pinned: true, order: 3 });
     const created = await localRequest("listAnnouncements", {});
@@ -77,6 +77,9 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     const student = host.querySelector("[data-announcement-surface=student]");
     const managerCards = manager && manager.querySelectorAll(".announcement-card").length === 3;
     const managerHasControls = manager && manager.querySelectorAll("[data-announcement-edit]").length === 3 && manager.querySelectorAll("[data-announcement-delete]").length === 3;
+    const managerDescriptionRemoved = manager && manager.querySelectorAll(".announcement-heading > div > p").length === 1;
+    const studentDescriptionRemoved = student && student.querySelectorAll(".announcement-heading > div > p").length === 1;
+    const descriptionDisplayed = manager && manager.querySelector(".announcement-description") && manager.querySelector(".announcement-description").textContent === "提供學生查閱資料。";
     const managerList = manager && manager.querySelector(".announcement-list");
     const managerCard = manager && manager.querySelector(".announcement-card");
     const listStyle = managerList && getComputedStyle(managerList);
@@ -92,6 +95,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     const classroomDrawer = document.getElementById("classroomAnnouncementDrawer");
     const classroomDrawerMounted = Boolean(document.getElementById("classroomAnnouncementButton") && classroomDrawer && classroomDrawer.querySelector("[data-announcement-surface=classroom]") && !classroomDrawer.querySelector("[data-announcement-add]") && !classroomDrawer.querySelector(".announcement-card-actions"));
     openAnnouncementForm();
+    const descriptionFieldOptional = Boolean(document.querySelector("#modalContent #announcementDescriptionField") && !document.querySelector("#modalContent #announcementDescriptionField").required);
     const pinnedInput = document.querySelector("#modalContent .announcement-checkbox input");
     const pinnedCopy = document.querySelector("#modalContent .announcement-checkbox span");
     const pinnedInputRect = pinnedInput && pinnedInput.getBoundingClientRect();
@@ -109,7 +113,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     state.demo = originalDemo;
     state.announcements = originalAnnouncements;
     renderAnnouncementSurfaces();
-    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, reorderWorks, managerCards, managerHasControls, horizontalCardLayout, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
+    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, reorderWorks, managerCards, managerHasControls, managerDescriptionRemoved, studentDescriptionRemoved, descriptionDisplayed, descriptionFieldOptional, horizontalCardLayout, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
   })()`);
 
   const checks = JSON.parse(result);
@@ -119,6 +123,10 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
   assert(checks.reorderWorks === true, "公告排序更新失敗");
   assert(checks.managerCards === true, "教師端公告卡片未正確渲染");
   assert(checks.managerHasControls === true, "教師端公告管理控制未出現");
+  assert(checks.managerDescriptionRemoved === true, "公告標題下方說明文字未移除");
+  assert(checks.studentDescriptionRemoved === true, "學生端公告標題下方說明文字未移除");
+  assert(checks.descriptionDisplayed === true, "公告簡要說明未顯示在標題下方");
+  assert(checks.descriptionFieldOptional === true, "公告簡要說明欄位未設為選填");
   assert(checks.horizontalCardLayout === true, "公告卡片未以橫向捲動排列");
   assert(checks.studentIsReadOnly === true, "學生端公告仍可見管理控制");
   assert(checks.linkIsSafe === true, "公告連結未以安全的新分頁開啟");

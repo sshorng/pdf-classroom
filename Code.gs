@@ -13,8 +13,8 @@ const TABLES = {
   },
   announcements: {
     name: "公告連結",
-    headers: ["公告ID", "標題", "連結", "置頂", "排序", "狀態", "建立時間", "修改時間"],
-    keys: ["id", "title", "url", "pinned", "order", "status", "createdAt", "updatedAt"]
+    headers: ["公告ID", "標題", "簡要說明", "連結", "置頂", "排序", "狀態", "建立時間", "修改時間"],
+    keys: ["id", "title", "description", "url", "pinned", "order", "status", "createdAt", "updatedAt"]
   },
   boards: {
     name: "教材版面",
@@ -70,6 +70,7 @@ const SETTINGS_DEFAULTS = [
 const MAX_TEXT = {
   name: 80,
   description: 300,
+  announcementDescription: 160,
   title: 100,
   url: 2048,
   prompt: 500,
@@ -375,15 +376,20 @@ function isAdminToken_(token) {
   return Boolean(value && CacheService.getScriptCache().get("pdfw_admin_" + value) === "1");
 }
 
+function adminPasswordRequiredMessage_() {
+  return "尚未設定教師管理密語，請先在「系統設定」工作表填入 AdminPassword。";
+}
+
 function requireManager_(payload) {
   const password = getSetting_("AdminPassword");
-  if (!password) return;
+  if (!password) throw new Error(adminPasswordRequiredMessage_());
   if (!isAdminToken_(payload && payload.adminToken)) throw new Error("需要教師管理權限。");
 }
 
 function verifyAdmin_(payload) {
   const configured = getSetting_("AdminPassword");
-  if (!configured) return { ok: true, token: issueAdminToken_(), expiresIn: 21600, configured: false };
+  if (!configured) throw new Error(adminPasswordRequiredMessage_());
+  if (isAdminToken_(payload && payload.adminToken)) return { ok: true, token: String(payload.adminToken), expiresIn: 21600, configured: true };
   if (String(payload.password || "") !== configured) throw new Error("教師管理密語不正確。");
   return { ok: true, token: issueAdminToken_(), expiresIn: 21600, configured: true };
 }
@@ -796,6 +802,27 @@ function publicBoard_(board) {
   };
 }
 
+function publicBoardSummary_(board) {
+  return {
+    id: board.id,
+    name: board.name,
+    description: board.description,
+    pdfFileName: board.pdfFileName,
+    materialCount: materialsForBoard_(board.id, board).length,
+    status: board.status,
+    createdAt: board.createdAt,
+    updatedAt: board.updatedAt
+  };
+}
+
+function compareBoardsByUpdatedAt_(a, b) {
+  const aTime = Date.parse(String(a.updatedAt || ""));
+  const bTime = Date.parse(String(b.updatedAt || ""));
+  const aValue = isNaN(aTime) ? 0 : aTime;
+  const bValue = isNaN(bTime) ? 0 : bTime;
+  return bValue - aValue || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")) || String(a.id || "").localeCompare(String(b.id || ""));
+}
+
 function publicInk_(item, strokesOverride) {
   return {
     id: item.id,
@@ -984,6 +1011,7 @@ function publicAnnouncement_(item) {
   return {
     id: String(item.id || ""),
     title: String(item.title || ""),
+    description: String(item.description || ""),
     url: String(item.url || ""),
     pinned: announcementPinned_(item.pinned),
     order: normalizeAnnouncementOrder_(item.order, 1),
@@ -1014,6 +1042,7 @@ function createAnnouncement_(payload) {
   requireManager_(payload || {});
   const title = cleanText_(payload.title, MAX_TEXT.title);
   if (!title) throw new Error("請填寫公告標題。");
+  const description = cleanText_(payload.description, MAX_TEXT.announcementDescription);
   const url = normalizeAnnouncementUrl_(payload.url);
   const id = cleanText_(payload.id, 120) || makeId_("AN");
   const existing = readTable_("announcements").find(function (item) { return String(item.id) === id; });
@@ -1023,6 +1052,7 @@ function createAnnouncement_(payload) {
   const item = {
     id: id,
     title: title,
+    description: description,
     url: url,
     pinned: announcementPinned_(payload.pinned),
     order: normalizeAnnouncementOrder_(payload.order, activeRows.length + 1),
@@ -1045,6 +1075,7 @@ function updateAnnouncement_(payload) {
     fields.title = cleanText_(payload.title, MAX_TEXT.title);
     if (!fields.title) throw new Error("公告標題不可為空白。");
   }
+  if (payload.description !== undefined) fields.description = cleanText_(payload.description, MAX_TEXT.announcementDescription);
   if (payload.url !== undefined) fields.url = normalizeAnnouncementUrl_(payload.url);
   if (payload.pinned !== undefined) fields.pinned = announcementPinned_(payload.pinned);
   if (payload.order !== undefined) fields.order = normalizeAnnouncementOrder_(payload.order, existing.order);
@@ -1082,7 +1113,15 @@ function listBoards_(payload) {
   requireManager_(payload || {});
   return {
     ok: true,
-    data: readTable_("boards").filter(function (item) { return String(item.status || "啟用") === "啟用"; }).map(publicBoard_),
+    data: readTable_("boards").filter(function (item) { return String(item.status || "啟用") === "啟用"; }).map(publicBoard_).sort(compareBoardsByUpdatedAt_),
+    serverTime: now_()
+  };
+}
+
+function listPublicBoards_() {
+  return {
+    ok: true,
+    data: readTable_("boards").filter(function (item) { return String(item.status || "啟用") === "啟用"; }).map(publicBoardSummary_).sort(compareBoardsByUpdatedAt_),
     serverTime: now_()
   };
 }
@@ -1886,7 +1925,7 @@ function isIdempotentAction_(action) {
 function canReadMutationResult_(action, payload) {
   const protectedActions = ["createBoard", "updateBoard", "archiveBoard", "deleteBoard", "createMaterial", "updateMaterial", "deleteMaterial", "createAnnouncement", "updateAnnouncement", "reorderAnnouncements", "deleteAnnouncement", "saveInk", "saveClassroomState", "deleteSubmission", "saveFeedback"];
   if (protectedActions.indexOf(String(action || "")) < 0) return true;
-  return !getSetting_("AdminPassword") || isAdminToken_(payload && payload.adminToken);
+  return isAdminToken_(payload && payload.adminToken);
 }
 
 function doGet(e) {
@@ -1896,6 +1935,7 @@ function doGet(e) {
     const action = String(parameter.action || "ping");
     if (action === "settings") return jsonOut_({ ok: true, settings: settingsInfo_() });
     if (action === "listAnnouncements") return jsonOut_(listAnnouncements_(parameter));
+    if (action === "listPublicBoards") return jsonOut_(listPublicBoards_());
     if (action === "listBoards") return jsonOut_(listBoards_(parameter));
     if (action === "getBoard") return jsonOut_(getBoardData_(parameter));
     if (action === "classroomPulse") return jsonOut_(classroomPulse_(parameter));
@@ -1922,6 +1962,7 @@ function doPost(e) {
       let result;
       if (action === "verifyAdmin") result = verifyAdmin_(payload);
       else if (action === "listAnnouncements") result = listAnnouncements_(payload);
+      else if (action === "listPublicBoards") result = listPublicBoards_();
       else if (action === "createAnnouncement") result = createAnnouncement_(payload);
       else if (action === "updateAnnouncement") result = updateAnnouncement_(payload);
       else if (action === "reorderAnnouncements") result = reorderAnnouncements_(payload);
