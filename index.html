@@ -189,7 +189,9 @@
     .announcement-heading h2 { margin-bottom: 3px; font-size: 21px; }
     .announcement-heading p:last-child { margin-bottom: 0; color: var(--muted); font-size: 12px; }
     .announcement-list { display: flex; min-width: 0; flex-wrap: nowrap; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 10px; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-color: #b6c8bf transparent; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
-    .announcement-card { position: relative; display: flex; flex: 0 0 min(340px, calc(100% - 24px)); width: min(340px, calc(100% - 24px)); min-height: 142px; flex-direction: column; padding: 15px; background: rgba(255,255,255,.86); border: 1px solid #dfe5dd; border-radius: 15px; scroll-snap-align: start; box-shadow: 0 6px 15px rgba(44, 52, 47, .06); }
+    .announcement-card { position: relative; display: flex; flex: 0 0 min(340px, calc(100% - 24px)); width: min(340px, calc(100% - 24px)); height: 240px; min-height: 0; overflow: hidden; flex-direction: column; padding: 15px; background: rgba(255,255,255,.86); border: 1px solid #dfe5dd; border-radius: 15px; scroll-snap-align: start; box-shadow: 0 6px 15px rgba(44, 52, 47, .06); }
+    .announcement-card-top, .announcement-card-copy, .announcement-card-actions { flex-shrink: 0; }
+    .announcement-card-copy { display: grid; min-width: 0; }
     .announcement-card.is-pinned { background: #fffaf0; border-color: #e7d4ad; }
     .announcement-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
     .announcement-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; color: var(--teal-dark); background: var(--teal-soft); border-radius: 999px; font-size: 11px; font-weight: 800; }
@@ -198,13 +200,13 @@
     .announcement-link { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; color: var(--teal-dark); text-decoration: none; }
     .announcement-link:hover .announcement-open { color: var(--accent-dark); }
     .announcement-card-title { overflow: hidden; color: var(--teal-dark); font-size: 16px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
-    .announcement-links { display: grid; gap: 8px; margin-top: 8px; }
-    .announcement-links .announcement-link { flex: 0 0 auto; padding: 8px 9px; background: rgba(247, 250, 246, .86); border: 1px solid #dfe8df; border-radius: 10px; }
+    .announcement-links { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 5px; margin-top: 8px; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-color: #b6c8bf transparent; scrollbar-width: thin; }
+    .announcement-links .announcement-link { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 8px; min-height: 36px; padding: 6px 9px; background: rgba(247, 250, 246, .86); border: 1px solid #dfe8df; border-radius: 8px; }
     .announcement-links .announcement-link:hover { background: #fff; border-color: #b9d2c4; }
-    .announcement-links .announcement-link strong { overflow: hidden; font-size: 13px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .announcement-links .announcement-link strong { flex: 1; min-width: 0; overflow: hidden; font-size: 13px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
     .announcement-description { overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
     .announcement-url { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-    .announcement-open { margin-top: 2px; color: var(--accent-dark); font-size: 11px; font-weight: 800; }
+    .announcement-open { flex-shrink: 0; color: var(--accent-dark); font-size: 13px; font-weight: 800; }
     .announcement-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 9px; padding-top: 7px; border-top: 1px solid rgba(225, 222, 212, .8); }
     .announcement-card-actions .area-action-button { width: 29px; height: 29px; }
     .announcement-empty { display: grid; flex: 1 0 100%; gap: 2px; padding: 18px; color: var(--muted); background: rgba(255,255,255,.62); border: 1px dashed #c9d4ca; border-radius: 13px; font-size: 12px; }
@@ -226,7 +228,7 @@
     .announcement-surface-compact .announcement-heading { align-items: flex-start; margin-bottom: 12px; }
     .announcement-surface-compact .announcement-heading h2 { font-size: 17px; }
     .announcement-surface-compact .announcement-list { gap: 10px; }
-    .announcement-surface-compact .announcement-card { flex-basis: min(300px, calc(100% - 16px)); width: min(300px, calc(100% - 16px)); min-height: 112px; padding: 12px; }
+    .announcement-surface-compact .announcement-card { flex-basis: min(300px, calc(100% - 16px)); width: min(300px, calc(100% - 16px)); height: 220px; padding: 12px; }
     .announcement-surface-compact .announcement-link strong { font-size: 14px; }
     .announcement-drawer { position: fixed; top: 68px; right: 14px; z-index: 80; width: min(520px, calc(100vw - 28px)); max-height: calc(100vh - 84px); overflow: auto; padding: 14px; background: rgba(255,253,248,.97); border: 1px solid rgba(225,222,212,.95); border-radius: 19px; box-shadow: 0 20px 60px rgba(23,35,30,.24); opacity: 0; pointer-events: none; transform: translateY(-10px); transition: opacity .18s ease, transform .18s ease; }
     .announcement-drawer.is-open { opacity: 1; pointer-events: auto; transform: translateY(0); }
@@ -1328,8 +1330,9 @@
             }
           } catch (error) {
             submitButton.disabled = false;
-            closeModal(false);
-            await showModal("操作未完成", error.message || "請稍後再試。", "error");
+            if (document.getElementById("modalContent").contains(form)) {
+              document.getElementById("modalMessage").textContent = error.message || "請稍後再試。";
+            }
           }
         });
         const firstInput = form.querySelector("input, textarea, select");
@@ -1630,7 +1633,7 @@
         const description = announcement.description ? "<span class=\"announcement-description\">" + escapeHtml(announcement.description) + "</span>" : "";
         const links = (announcement.links || []).map(function (link, linkIndex) {
           const linkLabel = link.label || "連結 " + (linkIndex + 1);
-          return "<a class=\"announcement-link\" href=\"" + escapeHtml(link.url) + "\" target=\"_blank\" rel=\"noopener noreferrer\"><strong>" + escapeHtml(linkLabel) + "</strong><span class=\"announcement-url\">" + escapeHtml(shortAnnouncementUrl(link.url)) + "</span><span class=\"announcement-open\">開啟連結 ↗</span></a>";
+          return "<a class=\"announcement-link\" href=\"" + escapeHtml(link.url) + "\" title=\"" + escapeHtml(linkLabel + "：" + link.url) + "\" aria-label=\"" + escapeHtml(linkLabel + "（另開新分頁）") + "\" target=\"_blank\" rel=\"noopener noreferrer\"><strong>" + escapeHtml(linkLabel) + "</strong><span class=\"announcement-open\" aria-hidden=\"true\">↗</span></a>";
         }).join("");
         return "<article class=\"announcement-card" + (announcement.pinned ? " is-pinned" : "") + "\"><div class=\"announcement-card-top\"><span class=\"announcement-tag\">" + (announcement.pinned ? "置頂" : "常用連結") + "</span><span class=\"announcement-time\">" + escapeHtml(formatTime(announcement.updatedAt)) + "</span></div><div class=\"announcement-card-copy\"><strong class=\"announcement-card-title\">" + escapeHtml(announcement.title) + "</strong>" + description + "</div><div class=\"announcement-links\">" + links + "</div>" + controls + "</article>";
       }).join("");
@@ -1705,6 +1708,9 @@
     }
 
     function applyAnnouncementResult(result) {
+      announcementRequestSequence += 1;
+      state.announcementLoading = false;
+      state.announcementError = "";
       if (result && Array.isArray(result.data)) state.announcements = normalizeAnnouncements(result.data);
       else if (result && result.announcement) {
         const rows = state.announcements.filter(function (item) { return String(item.id) !== String(result.announcement.id); });
@@ -1745,6 +1751,17 @@
 
     async function announcementApi(action, payload) {
       const result = state.demo ? await localRequest(action, payload || {}) : await managerApi(action, payload || {});
+      if ((action === "createAnnouncement" || action === "updateAnnouncement") && payload && payload.links) {
+        // Check the persisted list, not the server's in-memory echo of the submitted row.
+        const saved = result && Array.isArray(result.data) && result.data.find(function (item) { return String(item.id) === String(payload.id); });
+        const expected = normalizeAnnouncementLinks(payload.links, payload.url);
+        const actual = saved ? normalizeAnnouncementLinks(saved.links, saved.url) : [];
+        if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+          const error = new Error("後端未確認完整保存公告連結，填寫內容已保留。請確認目前連線的 GAS 已部署最新版，且公告連結工作表包含「連結資料」欄位，再重新儲存。");
+          if (saved) error.savedAnnouncementId = saved.id;
+          throw error;
+        }
+      }
       applyAnnouncementResult(result);
       return result;
     }
@@ -1763,6 +1780,8 @@
 
     function openAnnouncementForm(announcement) {
       const current = announcement || {};
+      const draftId = current.id || createId("AN");
+      let savedId = current.id;
       const checked = current.pinned ? " checked" : "";
       const existingLinks = normalizeAnnouncementLinks(current.links, current.url);
       const initialLinks = existingLinks.length ? existingLinks : [{ label: "", url: "" }];
@@ -1780,16 +1799,16 @@
           return { label: String(labels[index] || "").trim().slice(0, MAX_ANNOUNCEMENT_LINK_LABEL), url: normalizeAnnouncementUrl(value) };
         });
         const payload = { title: title, description: description, url: links[0].url, links: links, pinned: formData.get("pinned") === "on" };
-        if (current.id) {
-          payload.id = current.id;
-          await announcementApi("updateAnnouncement", payload);
-          showToast("公告已更新。", "success");
-        } else {
-          payload.id = createId("AN");
-          payload.order = state.announcements.length + 1;
-          await announcementApi("createAnnouncement", payload);
-          showToast("公告已新增。", "success");
+        payload.id = draftId;
+        payload.order = state.announcements.length + 1;
+        if (savedId) delete payload.order;
+        try {
+          await announcementApi(savedId ? "updateAnnouncement" : "createAnnouncement", payload);
+        } catch (error) {
+          if (error.savedAnnouncementId) savedId = error.savedAnnouncementId;
+          throw error;
         }
+        showToast(current.id ? "公告已更新。" : "公告已新增。", "success");
         return true;
       }, { wide: true });
       const editor = document.getElementById("announcementLinksEditor");

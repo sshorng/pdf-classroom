@@ -115,6 +115,55 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     const pinnedCheckboxLayout = Boolean(pinnedInputRect && pinnedCopyRect && pinnedInputRect.width <= 20 && pinnedInputRect.height <= 20 && pinnedCopyRect.left - pinnedInputRect.right <= 20);
     closeModal(false);
 
+    const originalLocalRequest = localRequest;
+    let submittedId;
+    let retryAction;
+    localRequest = async function (action, payload) {
+      submittedId = payload.id;
+      return { data: [{ ...payload, links: [payload.links[0]] }], announcement: payload };
+    };
+    const formPromise = openAnnouncementForm();
+    document.getElementById("announcementTitleField").value = "表單保存測試";
+    document.getElementById("addAnnouncementLinkButton").click();
+    document.getElementById("addAnnouncementLinkButton").click();
+    const formRows = [...document.querySelectorAll("[data-announcement-link-row]")];
+    formRows.forEach((row, index) => {
+      row.querySelector("[name=announcementLinkLabel]").value = "連結" + index;
+      row.querySelector("[name=announcementLinkUrl]").value = "https://example.com/form/" + index;
+    });
+    formRows[1].querySelector("[data-remove-announcement-link]").click();
+    const submittedForm = document.querySelector("#modalContent form");
+    submittedForm.requestSubmit();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const incompleteSavePreservesForm = document.querySelector("#modalContent form") === submittedForm && document.getElementById("modalOverlay").classList.contains("show") && document.getElementById("modalMessage").textContent.includes("後端未確認完整保存") && !document.querySelector("#modalActions [type=submit]").disabled && submittedForm.querySelectorAll("[name=announcementLinkUrl]")[1].value === "https://example.com/form/2";
+    if (!incompleteSavePreservesForm) throw new Error("不完整儲存未保留表單與錯誤訊息");
+    await originalLocalRequest("createAnnouncement", { id: submittedId, title: "表單保存測試", url: "https://example.com/form/0" });
+    localRequest = async function (action, payload) {
+      retryAction = action;
+      return originalLocalRequest(action, payload);
+    };
+    submittedForm.requestSubmit();
+    await formPromise;
+    localRequest = originalLocalRequest;
+    await loadAnnouncements();
+    const savedFormRow = state.announcements.find((item) => item.id === submittedId);
+    const formSaveRoundTrip = retryAction === "updateAnnouncement" && savedFormRow.links.length === 2 && savedFormRow.links[1].label === "連結2" && savedFormRow.links[1].url === "https://example.com/form/2";
+    if (!formSaveRoundTrip) throw new Error("表單重試或重新載入後連結遺失");
+    openAnnouncementForm(savedFormRow);
+    const reopenedLinksPreserved = document.querySelectorAll("#announcementLinksEditor [data-announcement-link-row]").length === 2 && document.querySelectorAll("[name=announcementLinkLabel]")[1].value === "連結2";
+    if (!reopenedLinksPreserved) throw new Error("重新編輯後連結遺失");
+    closeModal(false);
+    let resolveOldLoad;
+    localRequest = () => new Promise((resolve) => { resolveOldLoad = resolve; });
+    const oldLoad = loadAnnouncements();
+    applyAnnouncementResult({ data: [savedFormRow] });
+    resolveOldLoad({ data: [] });
+    await oldLoad;
+    const staleLoadIgnored = state.announcements.length === 1 && state.announcements[0].id === submittedId && !state.announcementLoading;
+    if (!staleLoadIgnored) throw new Error("舊查詢覆蓋新儲存結果");
+    localRequest = originalLocalRequest;
+    await localDelete("announcements", submittedId);
+
     const deleted = await localRequest("deleteAnnouncement", { id: ids[2] });
     const deleteWorks = deleted.deleted === 1 && deleted.data.length === 2;
     await Promise.all(ids.map((id) => localDelete("announcements", id)));
@@ -125,7 +174,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     state.demo = originalDemo;
     state.announcements = originalAnnouncements;
     renderAnnouncementSurfaces();
-    return JSON.stringify({ ready: true, invalidUrlRejected, initialSort, multipleLinksStored, legacyUrlUpdatePreservesLinks, reorderWorks, managerCards, managerHasControls, managerDescriptionRemoved, studentDescriptionRemoved, descriptionDisplayed, managerMultipleLinks, descriptionFieldOptional, initialLinkRows, linkEditorAddsRows, linkEditorRemovesRows, horizontalCardLayout, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
+    return JSON.stringify({ ready: true, incompleteSavePreservesForm, formSaveRoundTrip, reopenedLinksPreserved, staleLoadIgnored, invalidUrlRejected, initialSort, multipleLinksStored, legacyUrlUpdatePreservesLinks, reorderWorks, managerCards, managerHasControls, managerDescriptionRemoved, studentDescriptionRemoved, descriptionDisplayed, managerMultipleLinks, descriptionFieldOptional, initialLinkRows, linkEditorAddsRows, linkEditorRemovesRows, horizontalCardLayout, studentIsReadOnly, linkIsSafe, classroomDrawerMounted, pinnedCheckboxLayout, deleteWorks });
   })()`);
 
   const checks = JSON.parse(result);
@@ -152,6 +201,48 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
   assert(checks.pinnedCheckboxLayout === true, "置頂 checkbox 版面跑版");
   assert(checks.deleteWorks === true, "公告刪除失敗");
   console.log("announcement-cdp=" + JSON.stringify(checks));
+  for (const width of [1280, 375]) {
+    await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: width < 600 });
+    const layout = await evaluate(`(() => {
+      const original = state.announcements;
+      const host = document.createElement("div");
+      host.style.cssText = "position:fixed;inset:0;z-index:9999;overflow:auto;background:white";
+      host.innerHTML = announcementSurfaceHtml("layout-manager", true, false) + announcementSurfaceHtml("layout-student", false, true);
+      document.body.appendChild(host);
+      try {
+        const links = Array.from({ length: 8 }, (_, i) => ({ label: "很長的公告連結名稱".repeat(5) + i, url: "https://example.com/" + i }));
+        state.announcements = normalizeAnnouncements([{ id: "layout-one", title: "公告標題".repeat(20), description: "公告說明".repeat(30), links: links.slice(0, 1) }, { id: "layout-eight", title: "八個連結", links }]);
+        renderAnnouncementSurfaces();
+        return [...host.querySelectorAll("[data-announcement-surface]")].map(root => {
+          const cards = [...root.querySelectorAll(".announcement-card")];
+          const heights = cards.map(card => card.getBoundingClientRect().height);
+          const area = cards[1].querySelector(".announcement-links");
+          area.scrollTop = area.scrollHeight;
+          const last = area.lastElementChild.getBoundingClientRect();
+          const bounds = area.getBoundingClientRect();
+          const actions = cards[1].querySelector(".announcement-card-actions");
+          return {
+            heights,
+            fixedHeight: heights[0] === heights[1] && heights[0] === (root.classList.contains("announcement-surface-compact") ? 220 : 240),
+            scrolls: area.scrollTop > 0 && last.bottom <= bounds.bottom + 1,
+            singleLine: [...root.querySelectorAll(".announcement-link")].every(link => getComputedStyle(link).flexDirection === "row" && link.getBoundingClientRect().height <= 40 && link.title.includes(link.href)),
+            noHorizontalOverflow: area.scrollWidth === area.clientWidth,
+            actionsVisible: !actions || actions.getBoundingClientRect().bottom <= cards[1].getBoundingClientRect().bottom,
+            originalDeleteButton: !actions || actions.querySelector("[data-announcement-delete]").textContent === "×"
+          };
+        });
+      } finally {
+        state.announcements = original;
+        host.remove();
+        renderAnnouncementSurfaces();
+      }
+    })()`);
+    for (const item of layout) {
+      assert(item.fixedHeight && item.scrolls && item.singleLine && item.noHorizontalOverflow && item.actionsVisible && item.originalDeleteButton, "公告卡片版面驗證失敗：" + JSON.stringify({ width, ...item }));
+    }
+    console.log("announcement-layout=" + JSON.stringify({ width, surfaces: layout }));
+  }
+  await call("Emulation.clearDeviceMetricsOverride");
   socket.close();
 })().catch((error) => {
   console.error("announcement-cdp-error=" + error.message);
