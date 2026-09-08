@@ -13,8 +13,8 @@ const TABLES = {
   },
   announcements: {
     name: "公告連結",
-    headers: ["公告ID", "標題", "簡要說明", "連結", "置頂", "排序", "狀態", "建立時間", "修改時間"],
-    keys: ["id", "title", "description", "url", "pinned", "order", "status", "createdAt", "updatedAt"]
+    headers: ["公告ID", "標題", "簡要說明", "連結", "連結資料", "置頂", "排序", "狀態", "建立時間", "修改時間"],
+    keys: ["id", "title", "description", "url", "links", "pinned", "order", "status", "createdAt", "updatedAt"]
   },
   boards: {
     name: "教材版面",
@@ -86,7 +86,7 @@ const MAX_SHEET_JSON_CHARS = 45000;
 const TABLE_CACHE_SECONDS = 3;
 const TABLE_CACHE_MAX_CHARS = 90000;
 const TABLE_CACHE_PREFIX = "pdfw_table_v3_announcements_";
-const DATABASE_READY_CACHE_KEY = "pdfw_database_ready_v4_announcement_links";
+const DATABASE_READY_CACHE_KEY = "pdfw_database_ready_v5_announcement_links_schema";
 const JSON_REFERENCE_CACHE_PREFIX = "pdfw_json_v1_";
 const JSON_REFERENCE_CACHE_SECONDS = 300;
 const INK_DELTA_CACHE_PREFIX = "pdfw_ink_delta_v1_";
