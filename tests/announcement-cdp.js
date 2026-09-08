@@ -79,6 +79,8 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
     const manager = host.querySelector("[data-announcement-surface=manager-test]");
     const student = host.querySelector("[data-announcement-surface=student]");
     const managerCards = manager && manager.querySelectorAll(".announcement-card").length === 3;
+    if (host.querySelector(".announcement-card:not(.is-pinned) .announcement-tag")) throw new Error("一般公告仍顯示分類膠囊");
+    if (manager.querySelectorAll(".is-pinned .announcement-tag").length !== 2) throw new Error("置頂標記未保留");
     const managerHasControls = manager && manager.querySelectorAll("[data-announcement-edit]").length === 3 && manager.querySelectorAll("[data-announcement-delete]").length === 3;
     const managerDescriptionRemoved = manager && manager.querySelectorAll(".announcement-heading > div > p").length === 1;
     const studentDescriptionRemoved = student && student.querySelectorAll(".announcement-heading > div > p").length === 1;
@@ -211,11 +213,20 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
       document.body.appendChild(host);
       try {
         const links = Array.from({ length: 8 }, (_, i) => ({ label: "很長的公告連結名稱".repeat(5) + i, url: "https://example.com/" + i }));
-        state.announcements = normalizeAnnouncements([{ id: "layout-one", title: "公告標題".repeat(20), description: "公告說明".repeat(30), links: links.slice(0, 1) }, { id: "layout-eight", title: "八個連結", links }]);
+        state.announcements = normalizeAnnouncements([{ id: "layout-one", title: "公告標題".repeat(20), description: "公告說明".repeat(30), updatedAt: "2026-09-08T02:45:00Z", pinned: true, links: links.slice(0, 1) }, { id: "layout-eight", title: "八個連結", updatedAt: "2026-09-08T02:45:00Z", links }]);
         renderAnnouncementSurfaces();
         return [...host.querySelectorAll("[data-announcement-surface]")].map(root => {
           const cards = [...root.querySelectorAll(".announcement-card")];
           const heights = cards.map(card => card.getBoundingClientRect().height);
+          for (const card of cards) {
+            const top = card.querySelector(".announcement-card-top");
+            const title = top.querySelector(".announcement-card-title");
+            const time = top.querySelector(".announcement-time");
+            const tag = top.querySelector(".announcement-tag");
+            const titleRect = title.getBoundingClientRect();
+            const timeRect = time.getBoundingClientRect();
+            if (Math.abs((titleRect.top + titleRect.bottom) / 2 - (timeRect.top + timeRect.bottom) / 2) > 1 || timeRect.left < titleRect.right || (tag && tag.nextElementSibling !== title)) throw new Error("標題、置頂與時間未在同一行依序排列");
+          }
           const area = cards[1].querySelector(".announcement-links");
           area.scrollTop = area.scrollHeight;
           const last = area.lastElementChild.getBoundingClientRect();

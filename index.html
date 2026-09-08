@@ -193,13 +193,14 @@
     .announcement-card-top, .announcement-card-copy, .announcement-card-actions { flex-shrink: 0; }
     .announcement-card-copy { display: grid; min-width: 0; }
     .announcement-card.is-pinned { background: #fffaf0; border-color: #e7d4ad; }
-    .announcement-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
+    .announcement-card-top { display: flex; min-width: 0; align-items: center; gap: 6px; }
+    .announcement-card-top .announcement-tag, .announcement-card-top .announcement-time { flex-shrink: 0; }
     .announcement-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; color: var(--teal-dark); background: var(--teal-soft); border-radius: 999px; font-size: 11px; font-weight: 800; }
     .announcement-card.is-pinned .announcement-tag { color: #805d31; background: #f5e3ba; }
-    .announcement-time { color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .announcement-time { margin-left: auto; color: var(--muted); font-size: 10px; white-space: nowrap; }
     .announcement-link { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; color: var(--teal-dark); text-decoration: none; }
     .announcement-link:hover .announcement-open { color: var(--accent-dark); }
-    .announcement-card-title { overflow: hidden; color: var(--teal-dark); font-size: 16px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .announcement-card-title { flex: 1; min-width: 0; overflow: hidden; color: var(--teal-dark); font-size: 16px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
     .announcement-links { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 5px; margin-top: 8px; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-color: #b6c8bf transparent; scrollbar-width: thin; }
     .announcement-links .announcement-link { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 8px; min-height: 36px; padding: 6px 9px; background: rgba(247, 250, 246, .86); border: 1px solid #dfe8df; border-radius: 8px; }
     .announcement-links .announcement-link:hover { background: #fff; border-color: #b9d2c4; }
@@ -625,7 +626,6 @@
       <div class="topbar-actions">
         <span class="connection-badge" id="connectionBadge">尚未連線</span>
         <button class="icon-button" id="__sheetLink" type="button" title="開啟試算表">▦</button>
-        <button class="top-button" id="settingsButton" type="button">設定</button>
         <button class="top-button" id="teacherEntryButton" type="button">教師入口</button>
       </div>
     </header>
@@ -1440,7 +1440,6 @@
         event.preventDefault();
         goView("portal");
       });
-      document.getElementById("settingsButton").addEventListener("click", openSettingsModal);
       document.getElementById("teacherEntryButton").addEventListener("click", function () {
         if (state.teacherAuthenticated) logoutTeacher();
         else goView("manager");
@@ -1635,7 +1634,7 @@
           const linkLabel = link.label || "連結 " + (linkIndex + 1);
           return "<a class=\"announcement-link\" href=\"" + escapeHtml(link.url) + "\" title=\"" + escapeHtml(linkLabel + "：" + link.url) + "\" aria-label=\"" + escapeHtml(linkLabel + "（另開新分頁）") + "\" target=\"_blank\" rel=\"noopener noreferrer\"><strong>" + escapeHtml(linkLabel) + "</strong><span class=\"announcement-open\" aria-hidden=\"true\">↗</span></a>";
         }).join("");
-        return "<article class=\"announcement-card" + (announcement.pinned ? " is-pinned" : "") + "\"><div class=\"announcement-card-top\"><span class=\"announcement-tag\">" + (announcement.pinned ? "置頂" : "常用連結") + "</span><span class=\"announcement-time\">" + escapeHtml(formatTime(announcement.updatedAt)) + "</span></div><div class=\"announcement-card-copy\"><strong class=\"announcement-card-title\">" + escapeHtml(announcement.title) + "</strong>" + description + "</div><div class=\"announcement-links\">" + links + "</div>" + controls + "</article>";
+        return "<article class=\"announcement-card" + (announcement.pinned ? " is-pinned" : "") + "\"><div class=\"announcement-card-top\">" + (announcement.pinned ? "<span class=\"announcement-tag\">置頂</span>" : "") + "<strong class=\"announcement-card-title\" title=\"" + escapeHtml(announcement.title) + "\">" + escapeHtml(announcement.title) + "</strong><span class=\"announcement-time\">" + escapeHtml(formatTime(announcement.updatedAt)) + "</span></div><div class=\"announcement-card-copy\">" + description + "</div><div class=\"announcement-links\">" + links + "</div>" + controls + "</article>";
       }).join("");
     }
 
@@ -3237,9 +3236,8 @@
 
     async function renderManagerView(generation) {
       const main = document.getElementById("appMain");
-      main.innerHTML = "<section class=\"dashboard-compact-head\"><div><p class=\"eyebrow\">TEACHER WORKSPACE</p><h1>我的教材版面</h1></div><div class=\"dashboard-compact-actions\"><span class=\"meta-chip\" id=\"boardCount\">載入中</span><button class=\"button primary\" id=\"createBoardButton\" type=\"button\">＋ 建立教材版面</button><button class=\"button subtle\" id=\"openSettingsFromHero\" type=\"button\">連線設定</button></div></section><div class=\"offline-note\">目前離線，已儲存的本機資料仍可操作；新的照片與批改會在恢復連線後補傳。</div><div class=\"board-grid\" id=\"boardGrid\"><div class=\"loading-wrap loading\">正在讀取教材版面</div></div>";
+      main.innerHTML = "<section class=\"dashboard-compact-head\"><div><p class=\"eyebrow\">TEACHER WORKSPACE</p><h1>我的教材版面</h1></div><div class=\"dashboard-compact-actions\"><span class=\"meta-chip\" id=\"boardCount\">載入中</span><button class=\"button primary\" id=\"createBoardButton\" type=\"button\">＋ 建立教材版面</button></div></section><div class=\"offline-note\">目前離線，已儲存的本機資料仍可操作；新的照片與批改會在恢復連線後補傳。</div><div class=\"board-grid\" id=\"boardGrid\"><div class=\"loading-wrap loading\">正在讀取教材版面</div></div>";
       document.getElementById("createBoardButton").addEventListener("click", function () { openBoardForm(); });
-      document.getElementById("openSettingsFromHero").addEventListener("click", openSettingsModal);
       const announcementAnchor = main.querySelector(".dashboard-compact-head");
       if (announcementAnchor) announcementAnchor.insertAdjacentHTML("afterend", announcementSurfaceHtml("manager", true, false));
       renderAnnouncementSurfaces();
