@@ -71,6 +71,7 @@ const MAX_TEXT = {
   name: 80,
   description: 300,
   announcementDescription: 160,
+  announcementLinkLabel: 80,
   title: 100,
   url: 2048,
   prompt: 500,
@@ -80,6 +81,7 @@ const MAX_TEXT = {
   fileName: 120
 };
 
+const MAX_ANNOUNCEMENT_LINKS = 8;
 const MAX_SHEET_JSON_CHARS = 45000;
 const TABLE_CACHE_SECONDS = 3;
 const TABLE_CACHE_MAX_CHARS = 90000;
