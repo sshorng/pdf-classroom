@@ -165,9 +165,11 @@ function ensureTable_(key) {
   if (!hasAny) {
     sheet.getRange(1, 1, 1, table.headers.length).setValues([table.headers]);
   } else {
-    table.headers.forEach(function (header) {
-      if (firstRow.indexOf(header) < 0) sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
-    });
+    var missingHeaders = table.headers.filter(function (header) { return firstRow.indexOf(header) < 0; });
+    if (missingHeaders.length) {
+      var startCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, startCol, 1, missingHeaders.length).setValues([missingHeaders]);
+    }
   }
   sheet.setFrozenRows(1);
   return sheet;
@@ -267,13 +269,17 @@ function updateRow_(key, id, fields) {
   const sheet = getSheet_(key);
   const row = findRowById_(key, id);
   if (row < 0) throw new Error("找不到指定資料。");
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const lastColumn = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+  const rowValues = sheet.getRange(row, 1, 1, lastColumn).getValues()[0];
+  let changed = false;
   Object.keys(fields).forEach(function (field) {
     const fieldIndex = table.keys.indexOf(field);
     if (fieldIndex < 0 || fields[field] === undefined) return;
     const column = headers.indexOf(table.headers[fieldIndex]);
-    if (column >= 0) sheet.getRange(row, column + 1).setValue(safeCellValue_(fields[field]));
+    if (column >= 0) { rowValues[column] = safeCellValue_(fields[field]); changed = true; }
   });
+  if (changed) sheet.getRange(row, 1, 1, lastColumn).setValues([rowValues]);
   clearTableCache_(key);
   return row;
 }

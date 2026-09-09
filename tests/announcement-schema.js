@@ -25,9 +25,10 @@ const oldHeaders = table.headers.filter((header) => header !== "連結資料");
 const addedHeaders = [];
 const oldSheet = {
   getLastColumn: () => oldHeaders.length,
-  getRange: (row, column) => ({
+  getRange: (row, column, rows, cols) => ({
     getValues: () => [oldHeaders],
-    setValue: (value) => addedHeaders.push({ row, column, value })
+    setValue: (value) => addedHeaders.push({ row, column, value }),
+    setValues: (values) => values[0].forEach((value, i) => addedHeaders.push({ row, column: column + i, value }))
   }),
   setFrozenRows: () => {}
 };
@@ -38,7 +39,7 @@ assert(addedHeaders.some((item) => item.value === "連結資料"), "既有公告
 const rows = [];
 const currentSheet = {
   getLastColumn: () => table.headers.length,
-  getRange: () => ({ getValues: () => [table.headers] }),
+  getRange: () => ({ getValues: () => [table.headers], setValues: () => {} }),
   appendRow: (row) => rows.push(row)
 };
 context.getSheet_ = () => currentSheet;

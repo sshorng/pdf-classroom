@@ -679,7 +679,7 @@
     const MAX_IMAGE_COUNT = 2;
     const MAX_PDF_BYTES = 20 * 1024 * 1024;
     const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-    const CLASSROOM_POLL_INTERVAL = 1000;
+    const CLASSROOM_POLL_INTERVAL = 3000;
     const CLASSROOM_SYNC_MAX_IN_FLIGHT = 1;
     const CLASSROOM_SUBMISSIONS_POLL_INTERVAL = 6000;
     const GAS_GET_MAX_ATTEMPTS = 2;
@@ -3929,7 +3929,7 @@
         if (state.board) state.board.materials = state.materials;
         activeMaterialMissing = Boolean(state.activeMaterialId && !state.materials.some(function (item) { return String(item.id) === String(state.activeMaterialId); }));
       }
-       if (Array.isArray(result.areas) && !hasPendingCatalogMutation) state.areas = normalizeAreas(result.areas, state.boardId);
+       if (Array.isArray(result.areas) && !hasPendingCatalogMutation) { state.areas = normalizeAreas(result.areas, state.boardId); zonesGeneration += 1; }
        if (Array.isArray(result.answerMasks) && !hasPendingCatalogMutation) state.answerMasks = normalizeAnswerMasks(result.answerMasks, state.boardId);
        if (activeMaterialPdfChanged) {
         disposeCachedPdfDocument(requestedMaterialId);
@@ -4001,10 +4001,12 @@
            }
            return;
          }
-         renderMaterialControls();
-         renderStudentAreaList();
-        renderZones();
-         if (inkApplied) renderTeacherInk();
+         if (inkApplied || result.catalogChanged) {
+           renderMaterialControls();
+           renderStudentAreaList();
+           renderZones();
+           if (inkApplied) renderTeacherInk();
+         }
         return;
       }
       if (sharedMaterialId !== String(state.activeMaterialId)) {
@@ -4030,8 +4032,10 @@
          if (inkApplied) renderTeacherInk();
          updatePdfToolbar();
        }
-      renderMaterialControls();
-      renderReviewAreaList();
+      if (inkApplied || result.catalogChanged) {
+        renderMaterialControls();
+        renderReviewAreaList();
+      }
     }
 
     function scheduleClassroomStateSave() {
@@ -5541,9 +5545,12 @@
       return state.areas.filter(function (area) { return String(area.materialId || legacyMaterialId(state.boardId)) === materialId; });
     }
 
-     function renderZones() {
+     function renderZones(force) {
        const layer = document.getElementById("zoneLayer");
        if (!layer) return;
+       const currentGen = zonesGeneration + "|" + state.currentPage + "|" + state.activeMaterialId + "|" + state.selectedAreaId + "|" + state.activeAreaId;
+       if (!force && currentGen === lastRenderedZonesGeneration) return;
+       lastRenderedZonesGeneration = currentGen;
        renderRevealMasks();
        layer.querySelectorAll(".zone").forEach(function (element) { element.remove(); });
        const currentAreas = currentMaterialAreas().filter(function (area) { return Number(area.page) === Number(state.currentPage); });
@@ -6098,6 +6105,8 @@
       return action + "-" + key;
     }
 
+    let zonesGeneration = 0;
+    let lastRenderedZonesGeneration = -1;
     let outboxSequenceCounter = 0;
     function nextOutboxSequence() {
       outboxSequenceCounter += 1;
