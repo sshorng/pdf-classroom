@@ -798,6 +798,7 @@
     let modalResolver = null;
     let modalCloseResolver = null;
     let dbPromise = null;
+    let persistentStorageAvailable = true;
     let pdfRenderQueue = Promise.resolve();
     let activePdfRenderTask = null;
     let routeLoadGeneration = 0;
@@ -2009,7 +2010,7 @@
     }
 
     function openLocalDb() {
-      if (!window.indexedDB) return Promise.resolve(null);
+      if (!window.indexedDB) { persistentStorageAvailable = false; return Promise.resolve(null); }
       if (dbPromise) return dbPromise;
       dbPromise = new Promise(function (resolve, reject) {
         const request = indexedDB.open(DB_NAME, 4);
@@ -2020,7 +2021,7 @@
           });
         };
         request.onsuccess = function () { resolve(request.result); };
-        request.onerror = function () { resolve(null); };
+        request.onerror = function () { persistentStorageAvailable = false; resolve(null); };
       });
       return dbPromise;
     }
@@ -6085,7 +6086,7 @@
         renderStudentAreaList();
         renderZones();
         await renderStudentAnswerPanel();
-        showToast(state.demo ? "答案已送出。" : "答案已先儲存在本機，背景同步中。", state.demo ? "success" : "warning");
+        showToast(state.demo ? "答案已送出。" : (persistentStorageAvailable ? "答案已先儲存在本機，背景同步中。" : "答案暫存於記憶體，關閉頁面將遺失，請確認網路後重試。"), state.demo ? "success" : (persistentStorageAvailable ? "warning" : "error"));
       } catch (error) {
         await showModal("答案本機保存失敗", error.message || "請稍後再試。", "error");
       }
@@ -6097,11 +6098,10 @@
       return action + "-" + key;
     }
 
+    let outboxSequenceCounter = 0;
     function nextOutboxSequence() {
-      const key = APP_KEY + "outbox_sequence";
-      const next = Number(localStorage.getItem(key) || 0) + 1;
-      localStorage.setItem(key, String(next));
-      return next;
+      outboxSequenceCounter += 1;
+      return outboxSequenceCounter;
     }
 
     async function queueOutbox(action, payload, localUpdatedAt) {
@@ -6241,7 +6241,7 @@
             item.nextAttemptAt = Date.now() + Math.min(60000, 1000 * Math.pow(2, Math.min(attempts - 1, 6)));
             item.lastError = String(error.message || error);
             await localPut("outbox", item);
-            if (attempts === 1) showToast("背景同步暫停，資料仍保留在本機。", "warning");
+            if (attempts === 1) showToast(persistentStorageAvailable ? "背景同步暫停，資料仍保留在本機。" : "背景同步暫停，資料僅在記憶體中，關閉頁面將遺失。", persistentStorageAvailable ? "warning" : "error");
           }
         }
         const pending = await localAll("outbox");

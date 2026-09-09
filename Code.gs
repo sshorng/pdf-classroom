@@ -1275,8 +1275,8 @@ function cleanAnswerMasks_(board, masks) {
 
 function saveAnswerMasks_(boardId, masks) {
   const board = getBoard_(boardId, true);
-  deleteRows_("answerMasks", function (item) { return String(item.boardId) === String(board.id); });
-  cleanAnswerMasks_(board, masks).forEach(function (mask) { appendRow_("answerMasks", mask); });
+  const cleanedMasks = cleanAnswerMasks_(board, masks); deleteRows_("answerMasks", function (item) { return String(item.boardId) === String(board.id); });
+  cleanedMasks.forEach(function (mask) { appendRow_("answerMasks", mask); });
   touchClassroomPulseCatalog_(board);
   return answerMasksForBoard_(board.id, board);
 }
@@ -1518,17 +1518,17 @@ function createBoard_(payload) {
     createdAt: now,
     updatedAt: now
   };
-  appendRow_("boards", board);
+  // appendRow_("boards", board); moved to after upload
   if (payload.pdf && payload.pdf.data) {
     const pdfName = safeFileName_(name + "_" + (payload.pdf.name || "講義.pdf"));
     const materialId = legacyMaterialId_(board.id);
     const file = saveDriveFile_(Object.assign({}, payload.pdf, { name: pdfName }), "PDF教材", board.id, "", materialId);
-    updateRow_("boards", board.id, { pdfFileId: file.driveId, pdfFileName: file.name, pdfMime: file.mime, updatedAt: now_() });
+    board.updatedAt = now_();
     board.pdfFileId = file.driveId;
     board.pdfFileName = file.name;
     board.pdfMime = file.mime;
     appendRow_("materials", { id: materialId, boardId: board.id, name: payload.pdf.name || "主要教材", description: "", pdfFileId: file.driveId, pdfFileName: file.name, pdfMime: file.mime, order: 1, status: "啟用", createdAt: now, updatedAt: now });
-  }
+  } appendRow_("boards", board);
   saveAreas_(board.id, payload.areas || []);
   saveAnswerMasks_(board.id, payload.answerMasks || []);
   return { ok: true, board: publicBoard_(board), materials: materialsForBoard_(board.id, board), areas: areasForBoard_(board.id, board), answerMasks: answerMasksForBoard_(board.id, board) };
@@ -1543,7 +1543,7 @@ function saveAreas_(boardId, areas) {
   const removedAreaIds = readTable_("areas")
     .filter(function (item) { return String(item.boardId) === String(boardId) && !incomingIds[String(item.id)]; })
     .map(function (item) { return item.id; });
-  removeSubmissionsForAreas_(boardId, removedAreaIds);
+  incomingAreas.forEach(function (area) { if (!materialIds.has(materialIdForItem_(board, area.materialId))) throw new Error("問答區所屬教材不存在。"); }); removeSubmissionsForAreas_(boardId, removedAreaIds);
   deleteRows_("areas", function (item) { return String(item.boardId) === String(boardId); });
   const now = now_();
   incomingAreas.sort(compareAreasByPosition_).forEach(function (area, index) {
@@ -1830,9 +1830,9 @@ function saveSubmission_(payload) {
     text: cleanText_(payload.text, MAX_TEXT.answer),
     imageFileIds: JSON.stringify(imageIds.slice(0, 2)),
     imageFileNames: JSON.stringify(imageNames.slice(0, 2)),
-    teacherStrokes: "",
-    teacherComment: "",
-    status: "待批改",
+    teacherStrokes: existing ? existing.teacherStrokes : "",
+    teacherComment: existing ? existing.teacherComment : "",
+    status: existing ? existing.status : "待批改",
     clientId: cleanText_(payload.clientId, 100),
     createdAt: existing ? existing.createdAt : now,
     updatedAt: now,
@@ -1991,6 +1991,7 @@ function doGet(e) {
     if (action === "classroomPulse") return jsonOut_(classroomPulse_(parameter));
     if (action === "classroomSync") return jsonOut_(classroomSync_(parameter));
     if (action === "getFile") return jsonOut_(getFile_(parameter));
+    if (action === "listSubmissions") return jsonOut_(listSubmissions_(parameter));
     if (action === "sheetUrl") return jsonOut_({ ok: true, url: getSpreadsheet_().getUrl() });
     if (action === "ping") return jsonOut_({ ok: true, message: "PDF 互動講義 API 已啟動。", serverTime: now_() });
     throw new Error("未知的 API 動作：「" + action + "」。");
