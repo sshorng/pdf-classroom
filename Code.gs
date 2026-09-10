@@ -113,12 +113,15 @@ function setSpreadsheetId(id) {
   const value = String(id || "").trim();
   if (!value) throw new Error("請提供有效的試算表 ID。");
   PropertiesService.getScriptProperties().setProperty("SPREADSHEET_ID", value);
+  PropertiesService.getScriptProperties().deleteProperty("DATABASE_SCHEMA_READY");
   CacheService.getScriptCache().remove(DATABASE_READY_CACHE_KEY);
   clearAllTableCaches_();
   return "資料試算表 ID 已設定。";
 }
 
 function initDatabase() {
+  PropertiesService.getScriptProperties().deleteProperty("DATABASE_SCHEMA_READY");
+  CacheService.getScriptCache().remove(DATABASE_READY_CACHE_KEY);
   ensureDatabase_();
   getOrCreateRootFolder_();
   return "資料表與雲端硬碟資料夾初始化完成。";
@@ -132,10 +135,20 @@ function requestDriveScope() {
 function ensureDatabase_() {
   const cache = CacheService.getScriptCache();
   if (cache.get(DATABASE_READY_CACHE_KEY) === "1") return;
+  const properties = PropertiesService.getScriptProperties();
+  const schemaVersion = DATABASE_READY_CACHE_KEY + "|" + (properties.getProperty("SPREADSHEET_ID") || "bound");
+  if (properties.getProperty("DATABASE_SCHEMA_READY") === schemaVersion) {
+    cache.put(DATABASE_READY_CACHE_KEY, "1", 21600);
+    return;
+  }
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) throw new Error("目前正在初始化資料表，請稍後再試。");
   try {
     if (cache.get(DATABASE_READY_CACHE_KEY) === "1") return;
+    if (properties.getProperty("DATABASE_SCHEMA_READY") === schemaVersion) {
+      cache.put(DATABASE_READY_CACHE_KEY, "1", 21600);
+      return;
+    }
     Object.keys(TABLES).forEach(function (key) { ensureTable_(key); });
     const sheet = getSheet_("settings");
     const existing = readTable_("settings");
@@ -149,7 +162,8 @@ function ensureDatabase_() {
     });
     if (changed) clearTableCache_("settings");
     migrateLegacyMaterials_();
-    cache.put(DATABASE_READY_CACHE_KEY, "1", 300);
+    properties.setProperty("DATABASE_SCHEMA_READY", schemaVersion);
+    cache.put(DATABASE_READY_CACHE_KEY, "1", 21600);
   } finally {
     lock.releaseLock();
   }
@@ -1422,6 +1436,12 @@ function classroomPulse_(payload) {
   const clientCatalogVersion = String(payload.catalogVersion || "");
   const clientInkVersion = String(payload.inkVersion || "");
   const includeSubmissionCounts = String(payload.includeSubmissionCounts || "0") !== "0";
+  if (String(payload.includeChanges || "") === "1" && (clientCatalogVersion !== catalogVersion || clientInkVersion !== inkVersion)) {
+    const full = classroomSync_(payload);
+    full.catalogChanged = clientCatalogVersion !== String(full.catalogVersion || "");
+    full.stateChanged = clientStateVersion !== String(full.stateVersion || "");
+    return full;
+  }
   if (includeSubmissionCounts && !areas) areas = areasForBoard_(board.id, board);
   return {
     ok: true,
@@ -2000,7 +2020,7 @@ function doGet(e) {
     if (action === "getFile") return jsonOut_(getFile_(parameter));
     if (action === "listSubmissions") return jsonOut_(listSubmissions_(parameter));
     if (action === "sheetUrl") return jsonOut_({ ok: true, url: getSpreadsheet_().getUrl() });
-    if (action === "ping") return jsonOut_({ ok: true, message: "PDF 互動講義 API 已啟動。", serverTime: now_() });
+    if (action === "ping") return jsonOut_({ ok: true, message: "PDF 互動講義 API 已啟動。", apiVersion: "2026-09-10-network-v2", serverTime: now_() });
     throw new Error("未知的 API 動作：「" + action + "」。");
   } catch (error) {
     return jsonOut_({ ok: false, error: String(error.message || error) });

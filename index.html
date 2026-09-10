@@ -684,12 +684,13 @@
     const CLASSROOM_SUBMISSIONS_POLL_INTERVAL = 6000;
     const GAS_GET_MAX_ATTEMPTS = 2;
     const GAS_GET_RETRY_DELAY = 250;
-    const GAS_REQUEST_TIMEOUT = 12000;
-    const GAS_POST_TIMEOUT = 20000;
+    // 實測 GAS 回應曾需四十六秒；此為等待上限，成功回應不會額外等待。
+    const GAS_REQUEST_TIMEOUT = 60000;
+    const GAS_POST_TIMEOUT = 60000;
     const GAS_FILE_TIMEOUT = 60000;
     const GAS_SYNC_POST_TIMEOUT = 10000;
-    const CLASSROOM_PULSE_TIMEOUT = 5000;
-    const CLASSROOM_SYNC_TIMEOUT = 9000;
+    const CLASSROOM_PULSE_TIMEOUT = 60000;
+    const CLASSROOM_SYNC_TIMEOUT = 60000;
     const MAX_ANNOUNCEMENT_LINKS = 8;
     const MAX_ANNOUNCEMENT_LINK_LABEL = 80;
     const MAX_PDF_CACHE_ENTRIES = 2;
@@ -2684,7 +2685,9 @@
           if (settings.signal && settings.signal.aborted) throw new ApiError("同步請求已取消。", true, true);
           const requestOptions = { cache: "no-store" };
           if (settings.signal) requestOptions.signal = settings.signal;
-          const result = await fetchWithTimeout(url, requestOptions, timeout, async function (response) {
+          const attemptUrl = new URL(url);
+          attemptUrl.searchParams.set("_ts", String(Date.now()) + "-" + attempt);
+          const result = await fetchWithTimeout(attemptUrl.toString(), requestOptions, timeout, async function (response) {
             if (!response.ok) throw new ApiError("GAS 服務暫時無法回應。", true);
             return response.json();
           });
@@ -2880,7 +2883,7 @@
         const cached = cachedMatchesMaterial ? cachedFileResult(cachedFile) : null;
         if (cached) return cached;
         const params = { fileId: fileId, boardId: boardId, materialId: materialId || "" };
-        const result = state.demo ? await localRequest("getFile", params) : await gasGet("getFile", params, { timeout: GAS_FILE_TIMEOUT, maxAttempts: 1 });
+        const result = state.demo ? await localRequest("getFile", params) : await gasGet("getFile", params, { timeout: GAS_FILE_TIMEOUT, maxAttempts: 2 });
         try {
           await localPut("files", { id: result.fileId || fileId, name: result.name || "檔案", mime: result.mime || "application/octet-stream", base64: result.base64 || "", size: result.size || 0, boardId: boardId || "", materialId: materialId || "", cachedAt: new Date().toISOString() });
         } catch (error) {
@@ -3875,7 +3878,7 @@
        const includeSubmissionCounts = Date.now() - state.lastClassroomCountsPollAt >= CLASSROOM_SUBMISSIONS_POLL_INTERVAL;
        if (includeSubmissionCounts) state.lastClassroomCountsPollAt = Date.now();
         const syncPayload = { boardId: state.boardId, materialId: requestedMaterialId, inkPage: Number(state.currentPage) || 1, inkVersion: teacherInkVersionFor(requestedMaterialId), inkDelta: "1", includeSubmissionCounts: includeSubmissionCounts ? "1" : "0", stateVersion: state.classroomStateVersion, catalogVersion: state.classroomCatalogVersion, pulseVersion: state.classroomPulseVersion };
-        const pulsePayload = Object.assign({}, syncPayload, { includeSubmissionCounts: state.view === "student" && includeSubmissionCounts ? "1" : "0" });
+        const pulsePayload = Object.assign({}, syncPayload, { includeChanges: "1", includeSubmissionCounts: state.view === "student" && includeSubmissionCounts ? "1" : "0" });
        const classroomRequestOptions = { maxAttempts: 1, timeout: usePulse ? CLASSROOM_PULSE_TIMEOUT : CLASSROOM_SYNC_TIMEOUT, signal: settings.signal };
       try {
         if (usePulse) {
@@ -3888,7 +3891,7 @@
             } else {
               state.classroomPulseSupported = true;
               result = pulseResult;
-              if (result.inkChanged || result.catalogChanged) {
+              if ((result.inkChanged && !Array.isArray(result.ink)) || (result.catalogChanged && !Array.isArray(result.materials))) {
                  const fullResult = await gasGet("classroomSync", syncPayload, Object.assign({}, classroomRequestOptions, { timeout: CLASSROOM_SYNC_TIMEOUT }));
                 result = Object.assign({}, fullResult, {
                   pulseVersion: fullResult.pulseVersion !== undefined ? fullResult.pulseVersion : result.pulseVersion,

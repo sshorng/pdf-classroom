@@ -12,7 +12,7 @@ const section = (text, start, end) => text.slice(text.indexOf(start), text.index
   let calls = 0;
   let aborts = 0;
   const sandbox = {
-    window: { AbortController, setTimeout, clearTimeout }, AbortController, FormData, URLSearchParams,
+    window: { AbortController, setTimeout, clearTimeout }, AbortController, FormData, URLSearchParams, URL,
     GAS_URL: 'https://example.invalid/exec', GAS_POST_TIMEOUT: 25, GAS_REQUEST_TIMEOUT: 25,
     GAS_GET_MAX_ATTEMPTS: 2, GAS_GET_RETRY_DELAY: 1,
     markNetworkSuccess() { successes++; }, markNetworkFailure() { failures++; },
@@ -44,6 +44,14 @@ const section = (text, start, end) => text.slice(text.indexOf(start), text.index
   sandbox.fetch = async () => ({ ok: true, json: async () => ({ ok: false, error: 'Denied' }) });
   await assert.rejects(sandbox.gasGet('listPublicBoards', {}), e => !e.network);
   assert.equal(failures, 2, 'Application errors must not mark the network unhealthy');
+  const retryUrls = [];
+  sandbox.fetch = async url => {
+    retryUrls.push(url);
+    return retryUrls.length === 1 ? { ok: false, status: 404 } : { ok: true, json: async () => ({ ok: true }) };
+  };
+  await sandbox.gasGet('getFile', {}, { maxAttempts: 2 });
+  assert.equal(retryUrls.length, 2, 'Transient read failures must retry');
+  assert.notEqual(retryUrls[0], retryUrls[1], 'Retries must not reuse a failed response URL');
   console.log('PASS transport: stalled GET/POST bodies, cancellation, no write replay, success and application errors');
 
   let cacheReads = 0;
@@ -51,6 +59,7 @@ const section = (text, start, end) => text.slice(text.indexOf(start), text.index
   let released = 0;
   const backend = {
     DATABASE_READY_CACHE_KEY: 'ready', TABLES: { boards: {} },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     CacheService: { getScriptCache: () => ({ get: () => ++cacheReads === 1 ? null : '1' }) },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => released++ }) },
     ensureTable_: () => initialized++

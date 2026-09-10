@@ -26,7 +26,7 @@ const assert = require('node:assert/strict');
     await call('Page.navigate', { url: 'http://127.0.0.1:4173/index.html' });
     await new Promise(resolve => setTimeout(resolve, 1500));
     const evaluated = await call('Runtime.evaluate', { awaitPromise: true, returnByValue: true, expression: `(async () => {
-      const original = { loadAnnouncements, publicApi, ensurePdfJs, getFileWithCache, localRequest, demo: state.demo };
+      const original = { loadAnnouncements, publicApi, ensurePdfJs, getFileWithCache, localRequest, gasGet, demo: state.demo };
       let releaseAnnouncements;
       let boardsRequested = false;
       let releaseEngine;
@@ -61,11 +61,24 @@ const assert = require('node:assert/strict');
         state.revealedAnswerMaskIds = new Set();
         revealAnswerMask('network-mask');
         const studentCannotRevealAnswer = !state.revealedAnswerMaskIds.has('network-mask');
-        return { announcementDoesNotBlock, downloadDoesNotWaitForEngine, studentPositionPreserved, studentCannotRevealAnswer };
+        const calls = [];
+        let legacy = false;
+        state.demo = false;
+        gasGet = async action => {
+          calls.push(action);
+          return { ok: true, state: { materialId: 'network-test', page: 1, zoom: 1.25 }, pulseVersion: 'p', stateVersion: 's', catalogVersion: 'c', inkVersion: 'i', inkChanged: true, catalogChanged: false, ink: legacy && action === 'classroomPulse' ? null : [], inkDelta: true };
+        };
+        await loadClassroomSync({ pulse: true });
+        const combinedSyncUsesOneRequest = calls.join(',') === 'classroomPulse';
+        calls.length = 0; legacy = true;
+        await loadClassroomSync({ pulse: true });
+        const legacySyncStillWorks = calls.join(',') === 'classroomPulse,classroomSync';
+        return { announcementDoesNotBlock, downloadDoesNotWaitForEngine, studentPositionPreserved, studentCannotRevealAnswer, combinedSyncUsesOneRequest, legacySyncStillWorks };
       } finally {
         loadAnnouncements = original.loadAnnouncements; publicApi = original.publicApi;
         ensurePdfJs = original.ensurePdfJs; getFileWithCache = original.getFileWithCache;
         localRequest = original.localRequest;
+        gasGet = original.gasGet;
         clearMaterialPdfCache(); state.pdf = null; state.demo = original.demo;
       }
     })()` });
@@ -75,6 +88,8 @@ const assert = require('node:assert/strict');
     assert.equal(result.downloadDoesNotWaitForEngine, true);
     assert.equal(result.studentPositionPreserved, true);
     assert.equal(result.studentCannotRevealAnswer, true);
+    assert.equal(result.combinedSyncUsesOneRequest, true);
+    assert.equal(result.legacySyncStillWorks, true);
     console.log('network-browser=' + JSON.stringify(result));
   } finally { socket.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
