@@ -1359,7 +1359,7 @@
         badge.textContent = "連線不穩，重試中";
         badge.classList.add("is-warning");
       } else if (state.connectionStatus === "online") {
-        badge.textContent = "同步正常";
+        badge.textContent = "連線正常";
         badge.classList.add("is-online");
       } else {
         badge.textContent = "GAS 已設定";
@@ -1375,17 +1375,20 @@
     }
 
     function markNetworkFailure(error, action) {
-      if (error && error.network === false) return;
+      if (error && (error.network === false || error.aborted)) return;
       state.connectionLastFailureAt = Date.now();
       state.consecutiveNetworkErrors = (state.consecutiveNetworkErrors || 0) + 1;
-      state.connectionStatus = navigator.onLine === false || state.consecutiveNetworkErrors >= 3 ? "offline" : "degraded";
-      if (state.connectionStatus === "offline") setOfflineNote(true);
+      state.connectionStatus = navigator.onLine === false ? "offline" : "degraded";
+      setOfflineNote(state.connectionStatus === "offline" || state.consecutiveNetworkErrors >= 3);
       setConnectionBadge();
     }
 
     function setOfflineNote(show) {
       const note = document.querySelector(".offline-note");
-      if (note) note.classList.toggle("show", Boolean(show));
+      if (note) {
+        note.textContent = navigator.onLine === false ? "目前網路離線。尚未同步的內容請保留在此裝置，恢復連線後會嘗試補傳。" : "伺服器暫時無法回應，正在重試。尚未確認同步完成，請勿清除瀏覽器資料。";
+        note.classList.toggle("show", Boolean(show));
+      }
     }
 
     function openSettingsModal() {
@@ -3917,8 +3920,7 @@
          if (syncGenerationAtStart !== classroomSyncGeneration) return;
          classroomSyncFailures += 1;
          usedLocalFallback = true;
-         classroomSyncRetryAt = Date.now() + Math.min(30000, CLASSROOM_POLL_INTERVAL * Math.pow(2, Math.min(classroomSyncFailures, 4))) + Math.floor(Math.random() * 1000);
-         setOfflineNote(true);
+          classroomSyncRetryAt = Date.now() + Math.min(30000, CLASSROOM_POLL_INTERVAL * Math.pow(2, Math.min(classroomSyncFailures, 4))) + Math.floor(Math.random() * 1000);
         try {
           result = await localRequest("classroomSync", syncPayload);
         } catch (localError) {
@@ -4105,7 +4107,7 @@
     }
 
      async function pollClassroomView() {
-       if (document.visibilityState === "hidden" || (!state.demo && navigator.onLine === false) || Date.now() < classroomSyncRetryAt) return;
+        if (document.visibilityState === "hidden" || (!state.demo && navigator.onLine === false)) return;
        const tasks = [];
       if (state.view === "review" || state.view === "student") {
         const syncTask = startClassroomSyncPoll();
@@ -5766,8 +5768,6 @@
         renderStudentAreaList();
         renderZones();
         if (state.activeAreaId) renderStudentAnswerPanel();
-        state.consecutiveNetworkErrors = 0;
-        setOfflineNote(false);
       } catch (error) {
         if (!isCurrent()) return;
         if (error.network) {
@@ -5779,8 +5779,6 @@
           renderStudentAreaList();
           renderZones();
           if (state.activeAreaId) renderStudentAnswerPanel();
-          state.consecutiveNetworkErrors = (state.consecutiveNetworkErrors || 0) + 1;
-          if (state.consecutiveNetworkErrors >= 3 || !navigator.onLine) setOfflineNote(true);
         }
       }
     }
@@ -6527,8 +6525,6 @@
           renderReviewAreaList();
           renderSubmissionList();
            renderZones();
-           state.consecutiveNetworkErrors = 0;
-           setOfflineNote(false);
            Promise.all(mergedRows.map(function (item) { return localPut("submissions", item); })).catch(function () {});
          } catch (error) {
            if (!isCurrent()) return;
@@ -6540,8 +6536,6 @@
           renderReviewAreaList();
           renderSubmissionList();
           renderZones();
-          state.consecutiveNetworkErrors = (state.consecutiveNetworkErrors || 0) + 1;
-          if (state.consecutiveNetworkErrors >= 3 || !navigator.onLine) setOfflineNote(true);
         }
       }
 

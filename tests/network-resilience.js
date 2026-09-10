@@ -71,6 +71,36 @@ const section = (text, start, end) => text.slice(text.indexOf(start), text.index
   assert.equal(released, 1);
   console.log('PASS initialization: queued request skips repeated setup and releases lock');
 
+  const note = { textContent: '', classList: { toggle(name, show) { note.visible = show; } } };
+  const health = { state: {}, navigator: { onLine: true }, document: { querySelector: () => note }, setConnectionBadge() {} };
+  vm.createContext(health);
+  vm.runInContext(section(html, '    function markNetworkSuccess(', '    function openSettingsModal('), health);
+  health.markNetworkFailure({ network: true });
+  assert.equal(health.state.consecutiveNetworkErrors, 1);
+  assert.equal(health.state.connectionStatus, 'degraded');
+  assert.equal(note.visible, false);
+  health.markNetworkFailure({ network: false });
+  health.markNetworkFailure({ network: true, aborted: true });
+  assert.equal(health.state.consecutiveNetworkErrors, 1);
+  health.markNetworkFailure({ network: true });
+  health.markNetworkFailure({ network: true });
+  assert.equal(health.state.connectionStatus, 'degraded');
+  assert.equal(note.visible, true);
+  assert.match(note.textContent, /伺服器/);
+  health.navigator.onLine = false;
+  health.markNetworkFailure({ network: true });
+  assert.equal(health.state.connectionStatus, 'offline');
+  health.navigator.onLine = true;
+  health.markNetworkSuccess('classroomPulse');
+  assert.equal(note.visible, false);
+  assert.equal(health.state.consecutiveNetworkErrors, 0);
+  for (const name of ['loadStudentSubmissions', 'loadReviewSubmissions']) {
+    const start = html.indexOf('async function ' + name + '(');
+    const end = html.indexOf('\n    function ', start);
+    assert.ok(!html.slice(start, end).includes('consecutiveNetworkErrors'), name + ' must not double-count transport failures');
+  }
+  console.log('PASS health: transient failure is not offline, cancellation ignored, recovery clears warning, no duplicate counters');
+
   let syncCalls = 0;
   const poll = {
     classroomSyncGeneration: 1, classroomSyncPromise: null, classroomSyncPromiseGeneration: 0,
@@ -82,6 +112,18 @@ const section = (text, start, end) => text.slice(text.indexOf(start), text.index
   vm.runInContext(section(html, '     function startClassroomSyncPoll()', '    function startClassroomSubmissionPoll('), poll);
   assert.equal(poll.startClassroomSyncPoll(), null);
   assert.equal(syncCalls, 0);
+  let listCalls = 0;
+  Object.assign(poll, {
+    document: { visibilityState: 'visible' }, navigator: { onLine: true },
+    state: { view: 'review', demo: false, lastReviewSubmissionPollAt: 0 },
+    CLASSROOM_SUBMISSIONS_POLL_INTERVAL: 6000,
+    startClassroomSubmissionPoll: callback => Promise.resolve().then(callback),
+    loadReviewSubmissions: async () => { listCalls++; }
+  });
+  vm.runInContext(section(html, '     async function pollClassroomView()', '    function startClassroomPolling()'), poll);
+  await poll.pollClassroomView();
+  assert.equal(syncCalls, 0);
+  assert.equal(listCalls, 1, 'Pulse backoff must not block submission refresh');
   poll.classroomSyncRetryAt = 0;
   const first = poll.startClassroomSyncPoll();
   assert.equal(poll.startClassroomSyncPoll(), first, 'Concurrent polling must share one request');
