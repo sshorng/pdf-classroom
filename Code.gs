@@ -135,6 +135,7 @@ function ensureDatabase_() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) throw new Error("目前正在初始化資料表，請稍後再試。");
   try {
+    if (cache.get(DATABASE_READY_CACHE_KEY) === "1") return;
     Object.keys(TABLES).forEach(function (key) { ensureTable_(key); });
     const sheet = getSheet_("settings");
     const existing = readTable_("settings");

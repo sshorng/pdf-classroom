@@ -686,6 +686,7 @@
     const GAS_GET_RETRY_DELAY = 250;
     const GAS_REQUEST_TIMEOUT = 12000;
     const GAS_POST_TIMEOUT = 20000;
+    const GAS_FILE_TIMEOUT = 60000;
     const GAS_SYNC_POST_TIMEOUT = 10000;
     const CLASSROOM_PULSE_TIMEOUT = 5000;
     const CLASSROOM_SYNC_TIMEOUT = 9000;
@@ -2614,7 +2615,7 @@
       });
     }
 
-    async function fetchWithTimeout(url, options, timeout) {
+    async function fetchWithTimeout(url, options, timeout, readResponse) {
       const requestOptions = Object.assign({}, options || {});
       const externalSignal = requestOptions.signal || null;
       const controller = typeof window.AbortController === "function" ? new AbortController() : null;
@@ -2630,7 +2631,8 @@
         timer = window.setTimeout(function () { controller.abort(); }, timeout);
       }
       try {
-        return await fetch(url, requestOptions);
+        const response = await fetch(url, requestOptions);
+        return readResponse ? await readResponse(response) : response;
       } catch (error) {
         if (error && error.name === "AbortError") {
           const aborted = Boolean(externalSignal && externalSignal.aborted);
@@ -2652,9 +2654,10 @@
       try {
         const requestOptions = { method: "POST", body: form };
         if (settings.signal) requestOptions.signal = settings.signal;
-        const response = await fetchWithTimeout(GAS_URL, requestOptions, Number(settings.timeout) || GAS_POST_TIMEOUT);
-        if (!response.ok) throw new ApiError("GAS 服務暫時無法回應。", true);
-        const result = await response.json();
+        const result = await fetchWithTimeout(GAS_URL, requestOptions, Number(settings.timeout) || GAS_POST_TIMEOUT, async function (response) {
+          if (!response.ok) throw new ApiError("GAS 服務暫時無法回應。", true);
+          return response.json();
+        });
         if (!result.ok) throw new ApiError(result.error || "GAS 操作失敗。", false);
         markNetworkSuccess(action);
         return result;
@@ -2681,9 +2684,10 @@
           if (settings.signal && settings.signal.aborted) throw new ApiError("同步請求已取消。", true, true);
           const requestOptions = { cache: "no-store" };
           if (settings.signal) requestOptions.signal = settings.signal;
-          const response = await fetchWithTimeout(url, requestOptions, timeout);
-          if (!response.ok) throw new ApiError("GAS 服務暫時無法回應。", true);
-          const result = await response.json();
+          const result = await fetchWithTimeout(url, requestOptions, timeout, async function (response) {
+            if (!response.ok) throw new ApiError("GAS 服務暫時無法回應。", true);
+            return response.json();
+          });
           if (!result.ok) throw new ApiError(result.error || "GAS 操作失敗。", false);
           markNetworkSuccess(action);
           return result;
@@ -2876,7 +2880,7 @@
         const cached = cachedMatchesMaterial ? cachedFileResult(cachedFile) : null;
         if (cached) return cached;
         const params = { fileId: fileId, boardId: boardId, materialId: materialId || "" };
-        const result = state.demo ? await localRequest("getFile", params) : await gasGet("getFile", params);
+        const result = state.demo ? await localRequest("getFile", params) : await gasGet("getFile", params, { timeout: GAS_FILE_TIMEOUT, maxAttempts: 1 });
         try {
           await localPut("files", { id: result.fileId || fileId, name: result.name || "檔案", mime: result.mime || "application/octet-stream", base64: result.base64 || "", size: result.size || 0, boardId: boardId || "", materialId: materialId || "", cachedAt: new Date().toISOString() });
         } catch (error) {
@@ -2918,12 +2922,11 @@
       let pdf = state.materialPdfCache.get(String(material.id));
       let bytes = state.materialPdfBytesCache.get(String(material.id));
       if (!pdf) {
-        const pdfJs = await ensurePdfJs();
         const materialKey = String(material.id);
         let pending = state.materialPdfLoadCache.get(materialKey);
         if (!pending) {
           pending = (async function () {
-            const file = await getFileWithCache(material.pdfFileId, state.board && state.board.id, material.id);
+            const [pdfJs, file] = await Promise.all([ensurePdfJs(), getFileWithCache(material.pdfFileId, state.board && state.board.id, material.id)]);
             const loadedBytes = base64ToBytes(file.base64);
             const loadedPdf = await pdfJs.getDocument(pdfDocumentOptions(loadedBytes)).promise;
             return { pdf: loadedPdf, bytes: loadedBytes };
@@ -3196,7 +3199,7 @@
       main.innerHTML = "<section class=\"dashboard-compact-head portal-compact-head\"><div><p class=\"eyebrow\">STUDENT LIBRARY</p><h1>課堂講義入口</h1></div></section><div id=\"portalAnnouncementMount\"></div><div class=\"section-heading\"><div><h2>開放中的教材版面</h2><p>點選版面後即可進入學生頁。</p></div><span class=\"meta-chip\" id=\"portalBoardCount\">載入中</span></div><div class=\"offline-note\">目前無法連線，先顯示這台裝置保存的版面；重新連線後可取得最新資料。</div><div class=\"board-grid\" id=\"portalBoardGrid\"><div class=\"loading-wrap loading\">正在讀取教材版面</div></div>";
       document.getElementById("portalAnnouncementMount").innerHTML = announcementSurfaceHtml("portal", false, false);
       renderAnnouncementSurfaces();
-      await loadAnnouncements();
+      loadAnnouncements().catch(function () {});
       if (!isCurrentRouteLoad(generation, "portal", "")) return;
 
       const localBoards = (await localAll("boards")).filter(function (board) { return board.status !== "封存"; }).map(publicBoardSummary);
@@ -3242,7 +3245,7 @@
       const announcementAnchor = main.querySelector(".dashboard-compact-head");
       if (announcementAnchor) announcementAnchor.insertAdjacentHTML("afterend", announcementSurfaceHtml("manager", true, false));
       renderAnnouncementSurfaces();
-      await loadAnnouncements();
+      loadAnnouncements().catch(function () {});
 
        const localBoards = (await localAll("boards")).filter(function (board) { return board.status !== "封存"; });
        if (!isCurrentRouteLoad(generation, "manager", "")) return;
@@ -3841,6 +3844,8 @@
      let classroomSyncGeneration = 0;
      let classroomSyncRequestSequence = 0;
      let classroomSyncAppliedSequence = 0;
+     let classroomSyncFailures = 0;
+     let classroomSyncRetryAt = 0;
 
       function cancelClassroomSyncRequests() {
         classroomSyncGeneration += 1;
@@ -3849,6 +3854,8 @@
         classroomSyncPromise = null;
         classroomSyncPromiseGeneration = 0;
         classroomSyncInFlight = 0;
+        classroomSyncFailures = 0;
+        classroomSyncRetryAt = 0;
       }
 
      async function loadClassroomSync(options) {
@@ -3864,6 +3871,7 @@
        const localPage = state.currentPage;
        const localZoom = state.zoom;
        let result;
+       let usedLocalFallback = false;
        const includeSubmissionCounts = Date.now() - state.lastClassroomCountsPollAt >= CLASSROOM_SUBMISSIONS_POLL_INTERVAL;
        if (includeSubmissionCounts) state.lastClassroomCountsPollAt = Date.now();
         const syncPayload = { boardId: state.boardId, materialId: requestedMaterialId, inkPage: Number(state.currentPage) || 1, inkVersion: teacherInkVersionFor(requestedMaterialId), inkDelta: "1", includeSubmissionCounts: includeSubmissionCounts ? "1" : "0", stateVersion: state.classroomStateVersion, catalogVersion: state.classroomCatalogVersion, pulseVersion: state.classroomPulseVersion };
@@ -3903,7 +3911,11 @@
        } catch (error) {
          if (error && error.aborted) return;
          if (!error.network) return;
-        setOfflineNote(true);
+         if (syncGenerationAtStart !== classroomSyncGeneration) return;
+         classroomSyncFailures += 1;
+         usedLocalFallback = true;
+         classroomSyncRetryAt = Date.now() + Math.min(30000, CLASSROOM_POLL_INTERVAL * Math.pow(2, Math.min(classroomSyncFailures, 4))) + Math.floor(Math.random() * 1000);
+         setOfflineNote(true);
         try {
           result = await localRequest("classroomSync", syncPayload);
         } catch (localError) {
@@ -3912,7 +3924,8 @@
       }
        if (!isCurrentMaterialContext(syncPayload.boardId, requestedMaterialId, viewAtStart, selectionTokenAtStart) || syncGenerationAtStart !== classroomSyncGeneration) return;
        if (requestSequence < classroomSyncAppliedSequence) return;
-      if (result.pulseVersion !== undefined) state.classroomPulseVersion = String(result.pulseVersion || "");
+       if (!usedLocalFallback) { classroomSyncFailures = 0; classroomSyncRetryAt = 0; }
+       if (result.pulseVersion !== undefined) state.classroomPulseVersion = String(result.pulseVersion || "");
       if (result.stateVersion !== undefined) state.classroomStateVersion = String(result.stateVersion || "");
       if (result.catalogVersion !== undefined) state.classroomCatalogVersion = String(result.catalogVersion || "");
       const hasPendingCatalogMutation = await hasPendingBoardMutation(state.boardId);
@@ -4065,6 +4078,7 @@
      function startClassroomSyncPoll() {
        const generation = classroomSyncGeneration;
        if (classroomSyncPromise && classroomSyncPromiseGeneration === generation) return classroomSyncPromise;
+       if (Date.now() < classroomSyncRetryAt) return null;
        if (classroomSyncPromise && classroomSyncAbortController && typeof classroomSyncAbortController.abort === "function") classroomSyncAbortController.abort();
        const controller = typeof window.AbortController === "function" ? new AbortController() : null;
        classroomSyncAbortController = controller;
@@ -4088,7 +4102,7 @@
     }
 
      async function pollClassroomView() {
-       if (document.visibilityState === "hidden" || (!state.demo && navigator.onLine === false)) return;
+       if (document.visibilityState === "hidden" || (!state.demo && navigator.onLine === false) || Date.now() < classroomSyncRetryAt) return;
        const tasks = [];
       if (state.view === "review" || state.view === "student") {
         const syncTask = startClassroomSyncPoll();
@@ -6463,7 +6477,7 @@
        mountClassroomPdf();
        bindClassroomPdfEvents();
        mountClassroomAnnouncementSurface();
-       await loadAnnouncements();
+       loadAnnouncements().catch(function () {});
        renderReviewAreaList();
       await Promise.all([loadTeacherInk(reviewMaterialId), loadClassroomSync()]);
       if (!isCurrentRouteLoad(generation, "review", boardId)) return;
