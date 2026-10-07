@@ -100,13 +100,22 @@ const SUBMISSION_COUNT_CACHE_SECONDS = 5;
 const MUTATION_RESULT_CACHE_PREFIX = "pdfw_mutation_result_v1_";
 const MUTATION_RESULT_CACHE_SECONDS = 21600;
 const MUTATION_RESULT_CACHE_MAX_CHARS = 90000;
+const ADMIN_TOKEN_PROPERTY_PREFIX = "pdfw_admin_token_v1_";
+const ADMIN_TOKEN_CACHE_SECONDS = 21600;
+const TABLE_CACHE_TTL_ = { settings: 300, announcements: 120, boards: 120, materials: 120, areas: 120, answerMasks: 120, files: 30, classroomState: 10, ink: 10, submissions: 5 };
+var REQUEST_CACHE_ = null;
+function resetRequestCache_() { REQUEST_CACHE_ = { spreadsheet: null, spreadsheetReady: false, tables: {} }; }
+function tableCacheSeconds_(key) { const seconds = TABLE_CACHE_TTL_[key]; return typeof seconds === "number" && seconds > 0 ? seconds : TABLE_CACHE_SECONDS; }
 
 function getSpreadsheet_() {
+  if (REQUEST_CACHE_ && REQUEST_CACHE_.spreadsheetReady) return REQUEST_CACHE_.spreadsheet;
   const id = PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
-  if (id) return SpreadsheetApp.openById(id);
-  const active = SpreadsheetApp.getActiveSpreadsheet();
-  if (active) return active;
-  throw new Error("找不到資料試算表，請將 Code.gs 貼在試算表的 Apps Script 專案中。");
+  let spreadsheet = null;
+  if (id) spreadsheet = SpreadsheetApp.openById(id);
+  else spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet) throw new Error("找不到資料試算表，請將 Code.gs 貼在試算表的 Apps Script 專案中。");
+  if (REQUEST_CACHE_) { REQUEST_CACHE_.spreadsheet = spreadsheet; REQUEST_CACHE_.spreadsheetReady = true; }
+  return spreadsheet;
 }
 
 function setSpreadsheetId(id) {
@@ -198,6 +207,7 @@ function getSheet_(key) {
 }
 
 function clearTableCache_(key) {
+  if (REQUEST_CACHE_ && REQUEST_CACHE_.tables) delete REQUEST_CACHE_.tables[key];
   const cache = CacheService.getScriptCache();
   cache.remove(TABLE_CACHE_PREFIX + key);
   try {
@@ -210,14 +220,16 @@ function clearAllTableCaches_() {
 }
 
 function readTable_(key) {
+  if (REQUEST_CACHE_ && REQUEST_CACHE_.tables && Object.prototype.hasOwnProperty.call(REQUEST_CACHE_.tables, key)) return REQUEST_CACHE_.tables[key];
   const table = TABLES[key];
   const cacheKey = TABLE_CACHE_PREFIX + key;
+  const cacheSeconds = tableCacheSeconds_(key);
   const cache = CacheService.getScriptCache();
   let versionAtStart = "0";
   try {
     versionAtStart = String(cache.get(TABLE_CACHE_VERSION_PREFIX + key) || "0");
     const cached = cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    if (cached) { const parsed = JSON.parse(cached); if (REQUEST_CACHE_ && REQUEST_CACHE_.tables) REQUEST_CACHE_.tables[key] = parsed; return parsed; }
   } catch (error) {
     // 快取損壞時改讀試算表，不影響主要流程。
   }
@@ -226,8 +238,9 @@ function readTable_(key) {
   const lastColumn = sheet.getLastColumn();
   if (lastRow < 2 || lastColumn < 1) {
     try {
-      if (String(cache.get(TABLE_CACHE_VERSION_PREFIX + key) || "0") === versionAtStart) cache.put(cacheKey, "[]", TABLE_CACHE_SECONDS);
+      if (String(cache.get(TABLE_CACHE_VERSION_PREFIX + key) || "0") === versionAtStart) cache.put(cacheKey, "[]", cacheSeconds);
     } catch (error) {}
+    if (REQUEST_CACHE_ && REQUEST_CACHE_.tables) REQUEST_CACHE_.tables[key] = [];
     return [];
   }
   const values = sheet.getRange(1, 1, lastRow, lastColumn).getValues();
@@ -242,10 +255,11 @@ function readTable_(key) {
   });
   try {
     const serialized = JSON.stringify(rows);
-    if (serialized.length <= TABLE_CACHE_MAX_CHARS && String(cache.get(TABLE_CACHE_VERSION_PREFIX + key) || "0") === versionAtStart) cache.put(cacheKey, serialized, TABLE_CACHE_SECONDS);
+    if (serialized.length <= TABLE_CACHE_MAX_CHARS && String(cache.get(TABLE_CACHE_VERSION_PREFIX + key) || "0") === versionAtStart) cache.put(cacheKey, serialized, cacheSeconds);
   } catch (error) {
     // 大型資料表不寫入快取，避免超過 CacheService 單筆限制。
   }
+  if (REQUEST_CACHE_ && REQUEST_CACHE_.tables) REQUEST_CACHE_.tables[key] = rows;
   return rows;
 }
 
@@ -388,15 +402,44 @@ function parsePayload_(event) {
   }
 }
 
+function adminTokenPropertyKey_(token) {
+  return ADMIN_TOKEN_PROPERTY_PREFIX + String(token || "").trim();
+}
+
+function adminTokenCacheKey_(token) {
+  return "pdfw_admin_" + String(token || "").trim();
+}
+
+function persistAdminToken_(token) {
+  const value = String(token || "").trim();
+  if (!value) return;
+  PropertiesService.getScriptProperties().setProperty(adminTokenPropertyKey_(value), "1");
+  CacheService.getScriptCache().put(adminTokenCacheKey_(value), "1", ADMIN_TOKEN_CACHE_SECONDS);
+}
+
 function issueAdminToken_() {
   const token = Utilities.getUuid();
-  CacheService.getScriptCache().put("pdfw_admin_" + token, "1", 21600);
+  persistAdminToken_(token);
   return token;
 }
 
 function isAdminToken_(token) {
   const value = String(token || "").trim();
-  return Boolean(value && CacheService.getScriptCache().get("pdfw_admin_" + value) === "1");
+  if (!value) return false;
+  const cache = CacheService.getScriptCache();
+  if (cache.get(adminTokenCacheKey_(value)) === "1") return true;
+  const valid = PropertiesService.getScriptProperties().getProperty(adminTokenPropertyKey_(value)) === "1";
+  if (valid) cache.put(adminTokenCacheKey_(value), "1", ADMIN_TOKEN_CACHE_SECONDS);
+  return valid;
+}
+
+function revokeAdminToken_(payload) {
+  const value = String(payload && payload.adminToken || "").trim();
+  if (value) {
+    PropertiesService.getScriptProperties().deleteProperty(adminTokenPropertyKey_(value));
+    CacheService.getScriptCache().remove(adminTokenCacheKey_(value));
+  }
+  return { ok: true, loggedOut: true };
 }
 
 function adminPasswordRequiredMessage_() {
@@ -412,9 +455,12 @@ function requireManager_(payload) {
 function verifyAdmin_(payload) {
   const configured = getSetting_("AdminPassword");
   if (!configured) throw new Error(adminPasswordRequiredMessage_());
-  if (isAdminToken_(payload && payload.adminToken)) return { ok: true, token: String(payload.adminToken), expiresIn: 21600, configured: true };
+  if (isAdminToken_(payload && payload.adminToken)) {
+    persistAdminToken_(payload.adminToken);
+    return { ok: true, token: String(payload.adminToken), persistent: true, configured: true };
+  }
   if (String(payload.password || "") !== configured) throw new Error("教師管理密語不正確。");
-  return { ok: true, token: issueAdminToken_(), expiresIn: 21600, configured: true };
+  return { ok: true, token: issueAdminToken_(), persistent: true, configured: true };
 }
 
 function cleanText_(value, limit) {
@@ -861,10 +907,10 @@ function inkVersion_(rows) {
   return rows.map(function (item) { return String(item.id || "") + ":" + String(item.updatedAt || ""); }).sort().join("|");
 }
 
-function classroomCatalogVersion_(board, materials, areas) {
+function classroomCatalogVersion_(board, materials, areas, answerMasks) {
   const targetMaterials = materials || materialsForBoard_(board.id, board);
   const targetAreas = areas || areasForBoard_(board.id, board);
-  const targetAnswerMasks = answerMasksForBoard_(board.id, board);
+  const targetAnswerMasks = answerMasks || answerMasksForBoard_(board.id, board);
   const materialVersion = targetMaterials.map(function (item) {
     return String(item.id || "") + ":" + String(item.updatedAt || "") + ":" + String(item.pdfFileId || "");
   }).join(",");
@@ -887,9 +933,9 @@ function cacheClassroomPulseCatalog_(boardId, version) {
   writeClassroomPulseCache_(classroomPulseKey_(boardId, "catalog"), version);
 }
 
-function touchClassroomPulseCatalog_(board, materials, areas) {
+function touchClassroomPulseCatalog_(board, materials, areas, answerMasks) {
   if (!board || !board.id) return;
-  cacheClassroomPulseCatalog_(board.id, classroomCatalogVersion_(board, materials, areas));
+  cacheClassroomPulseCatalog_(board.id, classroomCatalogVersion_(board, materials, areas, answerMasks));
   touchClassroomPulse_(board.id);
 }
 
@@ -1190,11 +1236,23 @@ function listBoards_(payload) {
 }
 
 function listPublicBoards_() {
-  return {
-    ok: true,
-    data: readTable_("boards").filter(function (item) { return String(item.status || "啟用") === "啟用"; }).map(publicBoardSummary_).sort(compareBoardsByUpdatedAt_),
-    serverTime: now_()
-  };
+  const boards = readTable_("boards").filter(function (item) { return String(item.status || "啟用") === "啟用"; });
+  const materialRows = readTable_("materials");
+  const counts = {};
+  materialRows.forEach(function (item) {
+    if (String(item.status || "啟用") !== "啟用") return;
+    const key = String(item.boardId || "");
+    if (key) counts[key] = (counts[key] || 0) + 1;
+  });
+  const data = boards.map(function (board) {
+    const summary = publicBoardSummary_(board);
+    const key = String(board.id || "");
+    if (counts[key]) summary.materialCount = counts[key];
+    else if (board.pdfFileId) summary.materialCount = 1;
+    else summary.materialCount = 0;
+    return summary;
+  }).sort(compareBoardsByUpdatedAt_);
+  return { ok: true, data: data, serverTime: now_() };
 }
 
 function getBoardData_(payload) {
@@ -1357,7 +1415,9 @@ function classroomSync_(payload) {
   const sharedState = publicClassroomState_(state, board.id);
   if (materials.length && !materials.some(function (item) { return String(item.id) === String(sharedState.materialId); })) sharedState.materialId = materials[0].id;
   const stateVersion = String(sharedState.updatedAt || "");
-  const catalogVersion = classroomCatalogVersion_(board, materials, areas);
+  const catalogVersion = classroomCatalogVersion_(board, materials, areas, answerMasks);
+  const catalogChanged = String(payload.catalogVersion || "") !== catalogVersion;
+  const includeCatalog = String(payload.catalogDelta || "") !== "1" || catalogChanged;
   let pulseVersion = readClassroomPulseCache_(classroomPulseKey_(board.id, "token"));
   if (pulseVersion === null) {
     pulseVersion = [stateVersion, catalogVersion, inkVersion].join("¦");
@@ -1379,9 +1439,10 @@ function classroomSync_(payload) {
     inkReset: useInkDelta && (inkPage > 0 ? pageReset : !clientInkVersion),
     inkPage: inkPage,
     materialId: requestedMaterialId,
-    materials: materials,
-    areas: areas,
-    answerMasks: answerMasks,
+    catalogChanged: catalogChanged,
+    materials: includeCatalog ? materials : null,
+    areas: includeCatalog ? areas : null,
+    answerMasks: includeCatalog ? answerMasks : null,
     submissionCounts: includeSubmissionCounts ? submissionCountsForBoard_(board.id, requestedMaterialId, board, areas) : null,
     serverTime: now_()
   };
@@ -2007,6 +2068,7 @@ function canReadMutationResult_(action, payload) {
 
 function doGet(e) {
   try {
+    resetRequestCache_();
     ensureDatabase_();
     const parameter = e && e.parameter ? e.parameter : {};
     const action = String(parameter.action || "ping");
@@ -2029,6 +2091,7 @@ function doGet(e) {
 
 function doPost(e) {
   try {
+    resetRequestCache_();
     ensureDatabase_();
     const payload = parsePayload_(e);
     const action = String((e && e.parameter && e.parameter.action) || payload.action || "");
@@ -2039,6 +2102,7 @@ function doPost(e) {
       }
       let result;
       if (action === "verifyAdmin") result = verifyAdmin_(payload);
+      else if (action === "logoutAdmin") result = revokeAdminToken_(payload);
       else if (action === "listAnnouncements") result = listAnnouncements_(payload);
       else if (action === "listPublicBoards") result = listPublicBoards_();
       else if (action === "createAnnouncement") result = createAnnouncement_(payload);
