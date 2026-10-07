@@ -2536,7 +2536,24 @@
       if (action === "saveSubmission") {
         const board = await localGet("boards", data.boardId);
         if (!board) throw new Error("找不到指定教材版面。");
-        const area = normalizeAreas(board.areas || [], board.id).find(function (item) { return String(item.id) === String(data.areaId); });
+        let area = normalizeAreas(board.areas || [], board.id).find(function (item) { return String(item.id) === String(data.areaId); });
+        if (!area && typeof state !== "undefined" && state && String(state.boardId) === String(data.boardId) && Array.isArray(state.areas)) {
+          const fresh = normalizeAreas(state.areas, data.boardId).find(function (item) { return String(item.id) === String(data.areaId); });
+          if (fresh) {
+            area = fresh;
+            try {
+              const cached = await localGet("boards", data.boardId);
+              if (cached) {
+                const merged = normalizeAreas(cached.areas || [], cached.id);
+                merged.push(fresh);
+                cached.areas = merged;
+                await localPut("boards", cached);
+              }
+            } catch (healError) {
+              // 快取回補失敗不影響本次作答保存。
+            }
+          }
+        }
         if (!area) throw new Error("找不到指定問答區。");
          const materialId = localMaterialIdForArea(area, board.id);
          const existing = await localGet("submissions", data.id);
