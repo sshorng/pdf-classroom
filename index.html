@@ -700,7 +700,8 @@
     const PDFJS_SCRIPT_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
     const INK_SAVE_DELAY = 180;
     const INK_WIDTH_STEPS = [2, 4, 6, 8];
-    const PDFJS_ASSET_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+    const PDFJS_ASSET_BASE = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/";
+    // 字形對照表與標準字型改走 jsDelivr。cdnjs 的二進位資源未送跨來源標頭，瀏覽器會擋下中文字形載入。
     const PDF_CMAP_URL = PDFJS_ASSET_BASE + "cmaps/";
     const PDF_STANDARD_FONT_URL = PDFJS_ASSET_BASE + "standard_fonts/";
     const PDFIUM_MODULE_URL = "https://unpkg.com/@hyzyla/pdfium@2.1.13/browser/cdn";
