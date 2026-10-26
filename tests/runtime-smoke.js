@@ -21,7 +21,8 @@ if (!browserPath) {
 
 const PORT = Number(process.env.CDP_PORT || 9225);
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "pdfw-smoke-"));
-const pageUrl = "file:///" + path.resolve(__dirname, "../index.html").replace(/\\/g, "/");
+const targetPath = process.argv[2] || path.join(__dirname, "../index.html");
+const pageUrl = "file:///" + path.resolve(targetPath).replace(/\\/g, "/");
 const BODY = `
   const report = {};
   report.localRequest = typeof localRequest === "function";
@@ -33,6 +34,8 @@ const BODY = `
   report.eraseHit = eraseStrokesAtPoint([{ tool: "pen", width: .005, points: [{x:0,y:0},{x:1,y:1}] }], {x:0.5,y:0.5}).length === 0;
   report.eraseMiss = eraseStrokesAtPoint([{ tool: "pen", width: .005, points: [{x:0,y:0},{x:1,y:1}] }], {x:0.5,y:0.9}).length === 1;
   report.unknownActionRejected = await localRequest("noSuchAction", {}).then(() => false).catch((error) => /未知的本機操作/.test(error.message));
+  // 註解只能待在 script 內，跑版會直接出現在教材頁面上。
+  report.noVisibleCommentLeak = !/架構索引|第 [0-9]+ 區｜/.test(document.body.innerText);
   return report;
 `;
 const EXPRESSION = "(async () => JSON.stringify(await (async () => {" + BODY + "})()))()";
