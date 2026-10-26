@@ -5,6 +5,12 @@
  * 首次執行 initDatabase，再部署成網頁應用程式。
  */
 
+/**
+ * 【第 0 區 CONFIG 與 SCHEMA】（範圍：第 14 至 114 行）
+ * 資料表結構、設定預設值、快取鍵與 TTL 常數，以及請求內快取容器。
+ * 本區只宣告對外資料契約，不得呼叫 SpreadsheetApp 或 DriveApp。
+ */
+
 const TABLES = {
   settings: {
     name: "系統設定",
@@ -106,6 +112,13 @@ const TABLE_CACHE_TTL_ = { settings: 300, announcements: 120, boards: 120, mater
 var REQUEST_CACHE_ = null;
 function resetRequestCache_() { REQUEST_CACHE_ = { spreadsheet: null, spreadsheetReady: false, tables: {} }; }
 function tableCacheSeconds_(key) { const seconds = TABLE_CACHE_TTL_[key]; return typeof seconds === "number" && seconds > 0 ? seconds : TABLE_CACHE_SECONDS; }
+
+/**
+ * 【第 2 區 DATA ACCESS ADAPTER：試算表與資料表】（範圍：第 123 至 510 行）
+ * getSpreadsheet_、ensureTable_、readTable_、appendRow_、updateRow_、deleteRows_，
+ * 以及系統設定、脈衝快取與管理者權杖。所有 SpreadsheetApp 呼叫集中在本區。
+ * 註：第 1 區純函式位於本區段之後，因維持原檔順序而未搬移。
+ */
 
 function getSpreadsheet_() {
   if (REQUEST_CACHE_ && REQUEST_CACHE_.spreadsheetReady) return REQUEST_CACHE_.spreadsheet;
@@ -293,6 +306,15 @@ function findRowById_(key, id) {
   return index < 0 ? -1 : index + 2;
 }
 
+// 以 id 取資料列：readTable_ 已有請求內快取，重複呼叫不會增加試算表讀取。
+function findItemById_(rows, id) {
+  return rows.find(function (item) { return String(item.id) === String(id); }) || null;
+}
+
+function findTableItemById_(key, id) {
+  return findItemById_(readTable_(key), id);
+}
+
 function updateRow_(key, id, fields) {
   const table = TABLES[key];
   const sheet = getSheet_(key);
@@ -323,6 +345,20 @@ function deleteRows_(key, predicate) {
   matchingRows.reverse().forEach(function (row) { sheet.deleteRow(row); });
   if (matchingRows.length) clearTableCache_(key);
   return matchingRows.length;
+}
+
+function rowsForBoard_(key, boardId) {
+  return readTable_(key).filter(function (item) { return String(item.boardId) === String(boardId); });
+}
+
+function deleteRowsForBoard_(key, boardId) {
+  return deleteRows_(key, function (item) { return String(item.boardId) === String(boardId); });
+}
+
+function deleteRowsForBoardMaterial_(key, boardId, materialId) {
+  return deleteRows_(key, function (item) {
+    return String(item.boardId) === String(boardId) && materialIdOf_(item, boardId) === String(materialId);
+  });
 }
 
 function readSettings_() {
@@ -370,6 +406,16 @@ function writeClassroomPulseCache_(key, value) {
   } catch (error) {
     // 脈衝快取失敗時，下一次請求會回到資料表查詢，不影響同步正確性。
   }
+}
+
+// 脈衝版本只在快取缺失時才以目前狀態重算，避免每次請求都覆寫同一個值。
+function ensureClassroomPulseVersion_(boardId, stateVersion, catalogVersion, inkVersion) {
+  let pulseVersion = readClassroomPulseCache_(classroomPulseKey_(boardId, "token"));
+  if (pulseVersion === null) {
+    pulseVersion = [stateVersion, catalogVersion, inkVersion].join("¦");
+    writeClassroomPulseCache_(classroomPulseKey_(boardId, "token"), pulseVersion);
+  }
+  return pulseVersion;
 }
 
 function classroomPulseToken_() {
@@ -463,6 +509,22 @@ function verifyAdmin_(payload) {
   return { ok: true, token: issueAdminToken_(), persistent: true, configured: true };
 }
 
+/**
+ * 【第 1 區 PURE ENGINE：零 SpreadsheetApp 與 DriveApp 呼叫】（範圍：第 518 至 554 行）
+ * 字串清理、JSON 解析與資料列述詞，只依賴傳入參數。
+ * 註：其他純函式（compareAreasByPosition_、strokesHavePrefix_、normalizeAnnouncement* 等）
+ * 分散於第 3 區段內，位置沿用原檔，未搬移。
+ */
+// 資料列是否啟用：各處原本重複同一段字串比較，集中在純函式區。
+function isActiveRow_(item) {
+  return String(item.status || "啟用") === "啟用";
+}
+
+// 資料列的教材歸屬：未指定教材時一律視為該版面的舊版單一教材。
+function materialIdOf_(item, boardId) {
+  return String((item && item.materialId) || legacyMaterialId_(boardId));
+}
+
 function cleanText_(value, limit) {
   return String(value == null ? "" : value).trim().slice(0, limit);
 }
@@ -490,6 +552,11 @@ function parseObject_(value, fallback) {
     return fallback;
   }
 }
+
+/**
+ * 【第 2 區 DATA ACCESS ADAPTER（續）：快取層與 Drive 檔案存取】（範圍：第 561 至 790 行）
+ * 冪等結果快取、作答計數快取、Drive 資料夾與檔案存取，以及大型 JSON 外置存放。
+ */
 
 function mutationResultCacheKey_(action, payload) {
   const data = Object.assign({}, payload || {});
@@ -591,46 +658,43 @@ function boardFolderName_(board) {
 function getBoardByIdQuiet_(boardId) {
   if (!boardId) return null;
   try {
-    const boards = readTable_("boards");
-    return boards.find(function (b) { return String(b.id) === String(boardId); }) || null;
+    return findTableItemById_("boards", boardId);
   } catch (e) {
     return null;
   }
 }
 
+// 版面資料夾名稱：新版依版面名稱命名，舊版資料夾可能仍是版面 ID。
+function boardFolderTargetName_(boardId) {
+  const board = getBoardByIdQuiet_(boardId);
+  return board ? boardFolderName_(board) : safeFileName_(boardId);
+}
+
+// 先找新版名稱，再退回舊版 ID 命名；找不到回傳 null，交由呼叫端決定是否建立資料夾。
+function findBoardFolder_(root, targetName, boardId) {
+  const targetFolders = root.getFoldersByName(targetName);
+  if (targetFolders.hasNext()) return { folder: targetFolders.next(), legacy: false };
+  const legacyFolders = root.getFoldersByName(safeFileName_(boardId));
+  if (legacyFolders.hasNext()) return { folder: legacyFolders.next(), legacy: true };
+  return null;
+}
+
 function getOrCreateBoardFolder_(boardId) {
   const root = getOrCreateRootFolder_();
-  const board = getBoardByIdQuiet_(boardId);
-  const targetName = board ? boardFolderName_(board) : safeFileName_(boardId);
-  
-  const targetFolders = root.getFoldersByName(targetName);
-  if (targetFolders.hasNext()) return targetFolders.next();
-  
-  const legacyFolders = root.getFoldersByName(safeFileName_(boardId));
-  if (legacyFolders.hasNext()) {
-    const legacyFolder = legacyFolders.next();
-    try { legacyFolder.setName(targetName); } catch (e) {}
-    return legacyFolder;
-  }
-  
-  return root.createFolder(targetName);
+  const targetName = boardFolderTargetName_(boardId);
+  const match = findBoardFolder_(root, targetName, boardId);
+  if (!match) return root.createFolder(targetName);
+  // 舊版資料夾就地改名，避免同一版面出現兩個資料夾。
+  if (match.legacy) { try { match.folder.setName(targetName); } catch (e) {} }
+  return match.folder;
 }
 
 function getBoardFolderIfExists_(boardId) {
   const parent = spreadsheetParent_();
   const rootFolders = parent.getFoldersByName(getSetting_("DriveRootFolderName") || "PDF互動講義檔案");
   if (!rootFolders.hasNext()) return null;
-  const root = rootFolders.next();
-  const board = getBoardByIdQuiet_(boardId);
-  const targetName = board ? boardFolderName_(board) : safeFileName_(boardId);
-  
-  const targetFolders = root.getFoldersByName(targetName);
-  if (targetFolders.hasNext()) return targetFolders.next();
-  
-  const legacyFolders = root.getFoldersByName(safeFileName_(boardId));
-  if (legacyFolders.hasNext()) return legacyFolders.next();
-  
-  return null;
+  const match = findBoardFolder_(rootFolders.next(), boardFolderTargetName_(boardId), boardId);
+  return match ? match.folder : null;
 }
 
 function decodeBase64_(value) {
@@ -665,6 +729,21 @@ function saveDriveFile_(filePayload, purpose, boardId, submissionId, materialId)
   };
   appendRow_("files", index);
   return { driveId: file.getId(), name: fileName, mime: mime, size: bytes.length };
+}
+
+// Drive 檔案回收：只刪除沒有其他資料列引用的檔案，已手動移除的檔案不算錯誤。
+function trashDriveFiles_(driveIds, keepDriveIds) {
+  let trashed = 0;
+  (driveIds || []).forEach(function (driveId) {
+    if (!driveId || (keepDriveIds && keepDriveIds[driveId])) return;
+    try {
+      DriveApp.getFileById(driveId).setTrashed(true);
+      trashed += 1;
+    } catch (error) {
+      // 檔案可能已被手動移除，資料清理仍應繼續。
+    }
+  });
+  return trashed;
 }
 
 function storeJson_(value, purpose, boardId, submissionId, materialId) {
@@ -710,8 +789,15 @@ function readJsonReference_(value) {
   }
 }
 
+/**
+ * 【第 3 區 DOMAIN SERVICE】（範圍：第 799 至 2119 行）
+ * 版面、教材、問答區、教師筆跡、作答、公告與課堂狀態的業務規則。
+ * 註：本區也包含純比較與轉換函式（compareBoardsByUpdatedAt_、inkVersion_、
+ * strokesHavePrefix_、normalizeAnnouncement* 等），位置沿用原檔以維持依賴順序。
+ */
+
 function getBoard_(boardId, includeArchived) {
-  const board = readTable_("boards").find(function (item) { return String(item.id) === String(boardId); });
+  const board = findTableItemById_("boards", boardId);
   if (!board) throw new Error("找不到指定教材版面。");
   if (!includeArchived && String(board.status || "啟用") !== "啟用") throw new Error("這個教材版面目前已封存。");
   return board;
@@ -758,17 +844,22 @@ function publicMaterial_(item) {
 
 function materialsForBoard_(boardId, board) {
   const targetBoard = board || getBoard_(boardId, false);
-  const rows = readTable_("materials")
-    .filter(function (item) { return String(item.boardId) === String(targetBoard.id) && String(item.status || "啟用") === "啟用"; })
+  const rows = rowsForBoard_("materials", targetBoard.id)
+    .filter(isActiveRow_)
     .map(publicMaterial_)
     .sort(function (a, b) { return (Number(a.order) || 0) - (Number(b.order) || 0) || String(a.id).localeCompare(String(b.id)); });
   if (rows.length || !targetBoard.pdfFileId) return rows;
   return [publicMaterial_(legacyMaterial_(targetBoard))];
 }
 
+function findMaterialForBoard_(board, materialId) {
+  const targetId = String(materialId || "");
+  return materialsForBoard_(board.id, board).find(function (item) { return String(item.id) === targetId; }) || null;
+}
+
 function materialForBoard_(board, materialId) {
   const targetId = String(materialId || legacyMaterialId_(board.id));
-  const material = materialsForBoard_(board.id, board).find(function (item) { return String(item.id) === targetId; });
+  const material = findMaterialForBoard_(board, targetId);
   if (!material) throw new Error("找不到指定課堂教材。");
   return material;
 }
@@ -781,22 +872,23 @@ function isLegacyMaterialId_(board, materialId) {
   return String(materialId || "") === legacyMaterialId_(board.id);
 }
 
+// 版面底下的啟用資料列：補上教材歸屬後依畫面位置排序，問答區與答案遮罩共用。
+function boardScopedRows_(key, board, comparator) {
+  const legacyId = legacyMaterialId_(board.id);
+  return rowsForBoard_(key, board.id)
+    .filter(isActiveRow_)
+    .map(function (item) { return Object.assign({}, item, { materialId: String(item.materialId || legacyId) }); })
+    .sort(comparator);
+}
+
 function areasForBoard_(boardId, board) {
   const targetBoard = board || getBoard_(boardId, false);
-  const legacyId = legacyMaterialId_(targetBoard.id);
-  return readTable_("areas")
-    .filter(function (item) { return String(item.boardId) === String(targetBoard.id) && String(item.status || "啟用") === "啟用"; })
-    .map(function (item) { return Object.assign({}, item, { materialId: String(item.materialId || legacyId) }); })
-    .sort(compareAreasByPosition_);
+  return boardScopedRows_("areas", targetBoard, compareAreasByPosition_);
 }
 
 function answerMasksForBoard_(boardId, board) {
   const targetBoard = board || getBoard_(boardId, false);
-  const legacyId = legacyMaterialId_(targetBoard.id);
-  return readTable_("answerMasks")
-    .filter(function (item) { return String(item.boardId) === String(targetBoard.id) && String(item.status || "啟用") === "啟用"; })
-    .map(function (item) { return Object.assign({}, item, { materialId: String(item.materialId || legacyId) }); })
-    .sort(compareAnswerMasksByPosition_);
+  return boardScopedRows_("answerMasks", targetBoard, compareAnswerMasksByPosition_);
 }
 
 function compareAreasByPosition_(a, b) {
@@ -821,7 +913,7 @@ function removeSubmissionsForAreas_(boardId, areaIds, materialId) {
   const submissions = readTable_("submissions").filter(function (item) {
     if (String(item.boardId) !== String(boardId)) return false;
     if (targetAreas[String(item.areaId)]) return true;
-    return Boolean(targetMaterialId) && String(item.materialId || legacyMaterialId_(boardId)) === targetMaterialId;
+    return Boolean(targetMaterialId) && materialIdOf_(item, boardId) === targetMaterialId;
   });
   if (!submissions.length) return 0;
   const targetSubmissions = {};
@@ -837,22 +929,26 @@ function removeSubmissionsForAreas_(boardId, areaIds, materialId) {
   readTable_("submissions").filter(function (item) { return !targetSubmissions[String(item.id)]; }).forEach(function (submission) {
     submissionDriveIds_(submission).forEach(function (driveId) { remainingDriveIds[driveId] = true; });
   });
-  Object.keys(driveIds).forEach(function (driveId) {
-    if (remainingDriveIds[driveId]) return;
-    try {
-      DriveApp.getFileById(driveId).setTrashed(true);
-    } catch (error) {
-      // 檔案可能已被手動移除，資料清理仍應繼續。
-    }
-  });
+  trashDriveFiles_(Object.keys(driveIds), remainingDriveIds);
   deleteRows_("files", function (file) { return String(file.boardId) === String(boardId) && targetSubmissions[String(file.submissionId)]; });
   const deleted = deleteRows_("submissions", function (item) {
     if (String(item.boardId) !== String(boardId)) return false;
     if (targetAreas[String(item.areaId)]) return true;
-    return Boolean(targetMaterialId) && String(item.materialId || legacyMaterialId_(boardId)) === targetMaterialId;
+    return Boolean(targetMaterialId) && materialIdOf_(item, boardId) === targetMaterialId;
   });
   clearSubmissionCountCache_(boardId);
   return deleted;
+}
+
+// 版面與其目錄資料：回傳欄位順序與既有 API 契約一致。
+function boardCatalogResult_(board) {
+  return {
+    ok: true,
+    board: publicBoard_(board),
+    materials: materialsForBoard_(board.id, board),
+    areas: areasForBoard_(board.id, board),
+    answerMasks: answerMasksForBoard_(board.id, board)
+  };
 }
 
 function publicBoard_(board) {
@@ -1127,7 +1223,7 @@ function publicAnnouncement_(item) {
 
 function announcementsForPublic_() {
   return readTable_("announcements")
-    .filter(function (item) { return String(item.status || "啟用") === "啟用"; })
+    .filter(isActiveRow_)
     .map(publicAnnouncement_)
     .sort(function (a, b) {
       return Number(b.pinned) - Number(a.pinned) || a.order - b.order || String(b.updatedAt).localeCompare(String(a.updatedAt)) || String(a.id).localeCompare(String(b.id));
@@ -1150,9 +1246,9 @@ function createAnnouncement_(payload) {
   const links = normalizeAnnouncementLinks_(payload.links, payload.url);
   const url = links[0].url;
   const id = cleanText_(payload.id, 120) || makeId_("AN");
-  const existing = readTable_("announcements").find(function (item) { return String(item.id) === id; });
+  const existing = findTableItemById_("announcements", id);
   if (existing) return announcementResult_(existing);
-  const activeRows = readTable_("announcements").filter(function (item) { return String(item.status || "啟用") === "啟用"; });
+  const activeRows = readTable_("announcements").filter(isActiveRow_);
   const now = now_();
   const item = {
     id: id,
@@ -1174,7 +1270,7 @@ function updateAnnouncement_(payload) {
   requireManager_(payload || {});
   const id = cleanText_(payload.id, 120);
   if (!id) throw new Error("缺少公告 ID。");
-  const existing = readTable_("announcements").find(function (item) { return String(item.id) === id; });
+  const existing = findTableItemById_("announcements", id);
   if (!existing) throw new Error("找不到指定公告。");
   const fields = { updatedAt: now_() };
   if (payload.title !== undefined) {
@@ -1202,7 +1298,7 @@ function updateAnnouncement_(payload) {
 
 function reorderAnnouncements_(payload) {
   requireManager_(payload || {});
-  const rows = readTable_("announcements").filter(function (item) { return String(item.status || "啟用") === "啟用"; });
+  const rows = readTable_("announcements").filter(isActiveRow_);
   const items = parseArray_(payload.items);
   if (items.length !== rows.length) throw new Error("公告排序資料不完整。");
   const rowMap = {};
@@ -1230,17 +1326,17 @@ function listBoards_(payload) {
   requireManager_(payload || {});
   return {
     ok: true,
-    data: readTable_("boards").filter(function (item) { return String(item.status || "啟用") === "啟用"; }).map(publicBoard_).sort(compareBoardsByUpdatedAt_),
+    data: readTable_("boards").filter(isActiveRow_).map(publicBoard_).sort(compareBoardsByUpdatedAt_),
     serverTime: now_()
   };
 }
 
 function listPublicBoards_() {
-  const boards = readTable_("boards").filter(function (item) { return String(item.status || "啟用") === "啟用"; });
+  const boards = readTable_("boards").filter(isActiveRow_);
   const materialRows = readTable_("materials");
   const counts = {};
   materialRows.forEach(function (item) {
-    if (String(item.status || "啟用") !== "啟用") return;
+    if (!isActiveRow_(item)) return;
     const key = String(item.boardId || "");
     if (key) counts[key] = (counts[key] || 0) + 1;
   });
@@ -1265,7 +1361,7 @@ function listInk_(payload) {
   const board = getBoard_(payload.boardId, false);
   const materialId = payload.materialId ? materialForBoard_(board, payload.materialId).id : "";
   const rows = readTable_("ink").filter(function (item) {
-    const itemMaterialId = String(item.materialId || legacyMaterialId_(board.id));
+    const itemMaterialId = materialIdOf_(item, board.id);
     return String(item.boardId) === String(board.id) && (!materialId || itemMaterialId === materialId);
   });
   return {
@@ -1284,7 +1380,7 @@ function saveInk_(payload) {
   const page = Math.max(1, Number(payload.page) || 1);
   const strokes = Array.isArray(payload.strokes) ? payload.strokes : [];
   const id = isLegacyMaterialId_(board, materialId) ? "INK-" + board.id + "-" + page : "INK-" + board.id + "-" + materialId + "-" + page;
-  const existing = readTable_("ink").find(function (row) { return String(row.id) === id; });
+  const existing = findTableItemById_("ink", id);
   const previousValue = existing ? readJsonReference_(existing.strokes) : [];
   const previousStrokes = Array.isArray(previousValue) ? previousValue : [];
   const explicitReplace = payload && (payload.replaceInk === true || String(payload.replaceInk || "") === "1");
@@ -1292,7 +1388,7 @@ function saveInk_(payload) {
   if (existing && mutationId && String(existing.mutationId || "") === mutationId) {
     return { ok: true, annotation: payload.compact ? compactPublicInk_(existing) : publicInk_(existing) };
   }
-  if (existing && String(existing.materialId || legacyMaterialId_(board.id)) === String(materialId) && Number(existing.page) === page && JSON.stringify(previousStrokes) === JSON.stringify(strokes)) {
+  if (existing && materialIdOf_(existing, board.id) === String(materialId) && Number(existing.page) === page && JSON.stringify(previousStrokes) === JSON.stringify(strokes)) {
     return { ok: true, annotation: payload.compact ? compactPublicInk_(existing) : publicInk_(existing) };
   }
   if (existing && !explicitReplace && previousStrokes.length > strokes.length) {
@@ -1312,6 +1408,11 @@ function saveInk_(payload) {
   else clearInkDeltaRecords_(id);
   touchClassroomPulseInk_(item);
   return { ok: true, annotation: payload.compact ? compactPublicInk_(item) : publicInk_(item) };
+}
+
+// 課堂狀態一版面一列，讀取時以版面 ID 比對。
+function findClassroomStateRow_(boardId) {
+  return readTable_("classroomState").find(function (item) { return String(item.boardId) === String(boardId); }) || null;
 }
 
 function publicClassroomState_(item, boardId) {
@@ -1354,7 +1455,7 @@ function cleanAnswerMasks_(board, masks) {
 
 function saveAnswerMasks_(boardId, masks) {
   const board = getBoard_(boardId, true);
-  const cleanedMasks = cleanAnswerMasks_(board, masks); deleteRows_("answerMasks", function (item) { return String(item.boardId) === String(board.id); });
+  const cleanedMasks = cleanAnswerMasks_(board, masks); deleteRowsForBoard_("answerMasks", board.id);
   cleanedMasks.forEach(function (mask) { appendRow_("answerMasks", mask); });
   touchClassroomPulseCatalog_(board);
   return answerMasksForBoard_(board.id, board);
@@ -1374,8 +1475,7 @@ function submissionCountsForBoard_(boardId, materialId, board, areas) {
   const areaMap = {};
   targetAreas.forEach(function (area) { areaMap[String(area.id)] = area; });
   const counts = {};
-  readTable_("submissions").forEach(function (item) {
-    if (String(item.boardId) !== String(targetBoard.id)) return;
+  rowsForBoard_("submissions", targetBoard.id).forEach(function (item) {
     const area = areaMap[String(item.areaId)];
     if (!area || (materialId && String(area.materialId) !== String(materialId))) return;
     counts[String(item.areaId)] = (counts[String(item.areaId)] || 0) + 1;
@@ -1387,13 +1487,12 @@ function submissionCountsForBoard_(boardId, materialId, board, areas) {
 function classroomSync_(payload) {
   const board = getBoard_(payload.boardId, false);
   const materials = materialsForBoard_(board.id, board);
-  const rows = readTable_("classroomState");
-  const state = rows.find(function (item) { return String(item.boardId) === String(board.id); });
+  const state = findClassroomStateRow_(board.id);
   const requestedMaterial = payload.materialId ? materials.find(function (item) { return String(item.id) === String(payload.materialId); }) : null;
   const stateMaterialId = state && state.materialId ? String(state.materialId) : legacyMaterialId_(board.id);
   const requestedMaterialId = (requestedMaterial && requestedMaterial.id) || (materials.find(function (item) { return String(item.id) === stateMaterialId; }) || materials[0] || { id: legacyMaterialId_(board.id) }).id;
   const allInkRows = readTable_("ink").filter(function (item) {
-    return String(item.boardId) === String(board.id) && String(item.materialId || legacyMaterialId_(board.id)) === requestedMaterialId;
+    return String(item.boardId) === String(board.id) && materialIdOf_(item, board.id) === requestedMaterialId;
   });
   const rawInkPage = Number(payload.inkPage);
   const inkPage = Number.isFinite(rawInkPage) && rawInkPage > 0 ? Math.max(1, Math.floor(rawInkPage)) : 0;
@@ -1418,11 +1517,7 @@ function classroomSync_(payload) {
   const catalogVersion = classroomCatalogVersion_(board, materials, areas, answerMasks);
   const catalogChanged = String(payload.catalogVersion || "") !== catalogVersion;
   const includeCatalog = String(payload.catalogDelta || "") !== "1" || catalogChanged;
-  let pulseVersion = readClassroomPulseCache_(classroomPulseKey_(board.id, "token"));
-  if (pulseVersion === null) {
-    pulseVersion = [stateVersion, catalogVersion, inkVersion].join("¦");
-    writeClassroomPulseCache_(classroomPulseKey_(board.id, "token"), pulseVersion);
-  }
+  const pulseVersion = ensureClassroomPulseVersion_(board.id, stateVersion, catalogVersion, inkVersion);
   if (readClassroomPulseCache_(classroomPulseKey_(board.id, "state")) === null) cacheClassroomPulseState_(sharedState);
   if (readClassroomPulseCache_(classroomPulseKey_(board.id, "catalog")) === null) cacheClassroomPulseCatalog_(board.id, catalogVersion);
   if (inkPage > 0 && readClassroomPulseCache_(classroomPulseInkKey_(board.id, requestedMaterialId, inkPage)) === null) cacheClassroomPulseInk_(board.id, requestedMaterialId, inkPage, inkRows);
@@ -1454,7 +1549,7 @@ function classroomPulse_(payload) {
   let stateValue = readClassroomPulseCache_(stateKey);
   let sharedState = stateValue ? parseObject_(stateValue, null) : null;
   if (!sharedState || !sharedState.boardId) {
-    const stateRow = readTable_("classroomState").find(function (item) { return String(item.boardId) === String(board.id); });
+    const stateRow = findClassroomStateRow_(board.id);
     sharedState = publicClassroomState_(stateRow, board.id);
     cacheClassroomPulseState_(sharedState);
   }
@@ -1480,18 +1575,14 @@ function classroomPulse_(payload) {
   let inkVersion = inkPage > 0 ? readClassroomPulseCache_(inkKey) : null;
   if (inkPage > 0 && inkVersion === null) {
     const inkRows = readTable_("ink").filter(function (item) {
-      return String(item.boardId) === String(board.id) && String(item.materialId || legacyMaterialId_(board.id)) === requestedMaterialId && (Number(item.page) || 1) === inkPage;
+      return String(item.boardId) === String(board.id) && materialIdOf_(item, board.id) === requestedMaterialId && (Number(item.page) || 1) === inkPage;
     });
     inkVersion = inkVersion_(inkRows);
     cacheClassroomPulseInk_(board.id, requestedMaterialId, inkPage, inkRows);
   }
   if (inkPage === 0) inkVersion = "";
 
-  let pulseVersion = readClassroomPulseCache_(classroomPulseKey_(board.id, "token"));
-  if (pulseVersion === null) {
-    pulseVersion = [String(sharedState.updatedAt || ""), catalogVersion, inkVersion].join("¦");
-    writeClassroomPulseCache_(classroomPulseKey_(board.id, "token"), pulseVersion);
-  }
+  const pulseVersion = ensureClassroomPulseVersion_(board.id, String(sharedState.updatedAt || ""), catalogVersion, inkVersion);
   const stateVersion = String(sharedState.updatedAt || "");
   const clientStateVersion = String(payload.stateVersion || "");
   const clientCatalogVersion = String(payload.catalogVersion || "");
@@ -1538,39 +1629,37 @@ function saveClassroomState_(payload) {
     zoom: Math.max(0.6, Math.min(2.2, Number(payload.zoom) || 1)),
     updatedAt: now_()
   };
-  const existing = readTable_("classroomState").find(function (row) { return String(row.id) === item.id; });
+  const existing = findTableItemById_("classroomState", item.id);
   if (existing) updateRow_("classroomState", item.id, item);
   else appendRow_("classroomState", item);
   touchClassroomPulseState_(item, board.id);
   return { ok: true, state: publicClassroomState_(item, board.id) };
 }
 
+// 舊版資料列沒有教材歸屬時，一律補上該版面的舊版單一教材。
+function assignLegacyMaterialToRows_(key, board, legacyId) {
+  rowsForBoard_(key, board.id).filter(function (item) { return !item.materialId; })
+    .forEach(function (item) { updateRow_(key, item.id, { materialId: legacyId }); });
+}
+
 function materializeLegacyMaterial_(board) {
   const legacyId = legacyMaterialId_(board.id);
-  const existing = readTable_("materials").find(function (item) { return String(item.id) === legacyId; });
+  const existing = findTableItemById_("materials", legacyId);
   const legacy = existing || legacyMaterial_(board);
   if (!legacy) return null;
   if (!existing) appendRow_("materials", legacy);
-  readTable_("areas").filter(function (item) {
-    return String(item.boardId) === String(board.id) && !item.materialId;
-  }).forEach(function (item) { updateRow_("areas", item.id, { materialId: legacyId }); });
-  readTable_("ink").filter(function (item) {
-    return String(item.boardId) === String(board.id) && !item.materialId;
-  }).forEach(function (item) { updateRow_("ink", item.id, { materialId: legacyId }); });
-  readTable_("classroomState").filter(function (item) {
-    return String(item.boardId) === String(board.id) && !item.materialId;
-  }).forEach(function (item) { updateRow_("classroomState", item.id, { materialId: legacyId }); });
+  assignLegacyMaterialToRows_("areas", board, legacyId);
+  assignLegacyMaterialToRows_("ink", board, legacyId);
+  assignLegacyMaterialToRows_("classroomState", board, legacyId);
   const submissionMaterialIds = {};
-  readTable_("submissions").filter(function (item) {
-    return String(item.boardId) === String(board.id);
-  }).forEach(function (item) {
-    const area = readTable_("areas").find(function (candidate) { return String(candidate.id) === String(item.areaId); });
+  rowsForBoard_("submissions", board.id).forEach(function (item) {
+    const area = findItemById_(readTable_("areas"), item.areaId);
     const materialId = item.materialId || (area && area.materialId) || legacyId;
     submissionMaterialIds[String(item.id)] = materialId;
     if (!item.materialId) updateRow_("submissions", item.id, { materialId: materialId });
   });
-  readTable_("files").filter(function (item) {
-    return String(item.boardId) === String(board.id) && !item.materialId;
+  rowsForBoard_("files", board.id).filter(function (item) {
+    return !item.materialId;
   }).forEach(function (item) {
     const materialId = String(item.driveId) === String(board.pdfFileId) ? legacyId : submissionMaterialIds[String(item.submissionId)] || "";
     if (materialId) updateRow_("files", item.id, { materialId: materialId });
@@ -1590,8 +1679,8 @@ function createBoard_(payload) {
   if (!name) throw new Error("請填寫教材版面名稱。");
   const clientBoardId = cleanText_(payload.clientBoardId, 80);
   if (clientBoardId) {
-    const existing = readTable_("boards").find(function (item) { return String(item.id) === clientBoardId; });
-    if (existing) return { ok: true, board: publicBoard_(existing), materials: materialsForBoard_(existing.id, existing), areas: areasForBoard_(existing.id, existing), answerMasks: answerMasksForBoard_(existing.id, existing) };
+    const existing = findTableItemById_("boards", clientBoardId);
+    if (existing) return boardCatalogResult_(existing);
   }
   const now = now_();
   const boardId = clientBoardId || makeId_("B");
@@ -1619,7 +1708,7 @@ function createBoard_(payload) {
   } appendRow_("boards", board);
   saveAreas_(board.id, payload.areas || []);
   saveAnswerMasks_(board.id, payload.answerMasks || []);
-  return { ok: true, board: publicBoard_(board), materials: materialsForBoard_(board.id, board), areas: areasForBoard_(board.id, board), answerMasks: answerMasksForBoard_(board.id, board) };
+  return boardCatalogResult_(board);
 }
 
 function saveAreas_(boardId, areas) {
@@ -1632,7 +1721,7 @@ function saveAreas_(boardId, areas) {
     .filter(function (item) { return String(item.boardId) === String(boardId) && !incomingIds[String(item.id)]; })
     .map(function (item) { return item.id; });
   incomingAreas.forEach(function (area) { if (!materialIds.has(materialIdForItem_(board, area.materialId))) throw new Error("問答區所屬教材不存在。"); }); removeSubmissionsForAreas_(boardId, removedAreaIds);
-  deleteRows_("areas", function (item) { return String(item.boardId) === String(boardId); });
+  deleteRowsForBoard_("areas", boardId);
   const now = now_();
   incomingAreas.sort(compareAreasByPosition_).forEach(function (area, index) {
     const materialId = materialIdForItem_(board, area.materialId);
@@ -1677,11 +1766,11 @@ function updateBoard_(payload) {
   if (payload.description !== undefined) fields.description = cleanText_(payload.description, MAX_TEXT.description);
   if (payload.pdf && payload.pdf.data) {
     const materialId = payload.materialId ? String(payload.materialId) : legacyMaterialId_(board.id);
-    const material = materialsForBoard_(board.id, board).find(function (item) { return String(item.id) === materialId; });
+    const material = findMaterialForBoard_(board, materialId);
     if (!material && !isLegacyMaterialId_(board, materialId)) throw new Error("找不到指定課堂教材。");
     const pdfName = safeFileName_(((material && material.name) || fields.name || board.name || "教材") + "_" + (payload.pdf.name || "講義.pdf"));
     const file = saveDriveFile_(Object.assign({}, payload.pdf, { name: pdfName }), "PDF教材", board.id, "", materialId);
-    const materialRow = readTable_("materials").find(function (item) { return String(item.id) === materialId; });
+    const materialRow = findTableItemById_("materials", materialId);
     if (materialRow) {
       updateRow_("materials", materialId, { pdfFileId: file.driveId, pdfFileName: file.name, pdfMime: file.mime, updatedAt: now_() });
     } else if (isLegacyMaterialId_(board, materialId)) {
@@ -1712,10 +1801,10 @@ function createMaterial_(payload) {
   if (!payload.pdf || !payload.pdf.data) throw new Error("請選擇 PDF 教材。");
   materializeLegacyMaterial_(board);
   const id = cleanText_(payload.id, 100) || makeId_("M");
-  const existing = readTable_("materials").find(function (item) { return String(item.id) === id; });
+  const existing = findTableItemById_("materials", id);
   if (existing) {
     if (String(existing.boardId) !== String(board.id)) throw new Error("教材 ID 已存在。");
-    return { ok: true, material: publicMaterial_(existing), board: publicBoard_(board), materials: materialsForBoard_(board.id, board), areas: areasForBoard_(board.id, board), answerMasks: answerMasksForBoard_(board.id, board) };
+    return Object.assign({ ok: true, material: publicMaterial_(existing) }, boardCatalogResult_(board));
   }
   const now = now_();
   const order = materialsForBoard_(board.id, board).length + 1;
@@ -1749,7 +1838,7 @@ function updateMaterial_(payload) {
     fields.pdfFileName = file.name;
     fields.pdfMime = file.mime;
   }
-  const row = readTable_("materials").find(function (item) { return String(item.id) === materialId; });
+  const row = findTableItemById_("materials", materialId);
   if (!row) {
     if (!isLegacyMaterialId_(board, materialId)) throw new Error("找不到指定課堂教材。");
     const legacy = materializeLegacyMaterial_(board);
@@ -1794,19 +1883,16 @@ function deleteMaterial_(payload) {
   const remainingDriveIds = {};
   readTable_("materials").filter(function (item) { return String(item.boardId) !== String(board.id) || String(item.id) !== materialId; }).forEach(function (item) { if (item.pdfFileId) remainingDriveIds[String(item.pdfFileId)] = true; });
   readTable_("boards").filter(function (item) { return String(item.id) !== String(board.id); }).forEach(function (item) { if (item.pdfFileId) remainingDriveIds[String(item.pdfFileId)] = true; });
-  Object.keys(driveIds).forEach(function (driveId) {
-    if (remainingDriveIds[driveId]) return;
-    try { DriveApp.getFileById(driveId).setTrashed(true); } catch (error) {}
-  });
+  trashDriveFiles_(Object.keys(driveIds), remainingDriveIds);
   deleteRows_("files", function (file) { return String(file.boardId) === String(board.id) && String(file.materialId || "") === materialId; });
-  deleteRows_("ink", function (item) { return String(item.boardId) === String(board.id) && String(item.materialId || legacyMaterialId_(board.id)) === materialId; });
-  deleteRows_("areas", function (item) { return String(item.boardId) === String(board.id) && String(item.materialId || legacyMaterialId_(board.id)) === materialId; });
-  deleteRows_("answerMasks", function (item) { return String(item.boardId) === String(board.id) && String(item.materialId || legacyMaterialId_(board.id)) === materialId; });
+  deleteRowsForBoardMaterial_("ink", board.id, materialId);
+  deleteRowsForBoardMaterial_("areas", board.id, materialId);
+  deleteRowsForBoardMaterial_("answerMasks", board.id, materialId);
   deleteRows_("materials", function (item) { return String(item.id) === materialId; });
   const remainingMaterials = materialsForBoard_(board.id, board).filter(function (item) { return String(item.id) !== materialId; });
   const replacement = remainingMaterials[0];
-  const stateRow = readTable_("classroomState").find(function (item) { return String(item.boardId) === String(board.id); });
-  if (stateRow && String(stateRow.materialId || legacyMaterialId_(board.id)) === materialId) {
+  const stateRow = findClassroomStateRow_(board.id);
+  if (stateRow && materialIdOf_(stateRow, board.id) === materialId) {
     if (replacement) {
       const stateUpdatedAt = now_();
       updateRow_("classroomState", stateRow.id, { materialId: replacement.id, page: 1, zoom: 1, updatedAt: stateUpdatedAt });
@@ -1838,10 +1924,10 @@ function deleteBoard_(payload) {
   const boardId = cleanText_(payload.boardId, 80);
   if (!boardId) throw new Error("缺少教材版面 ID。");
   clearAllTableCaches_();
-  const board = readTable_("boards").find(function (item) { return String(item.id) === boardId; });
-  const materials = readTable_("materials").filter(function (item) { return String(item.boardId) === boardId; });
-  const submissions = readTable_("submissions").filter(function (item) { return String(item.boardId) === boardId; });
-  const inkRows = readTable_("ink").filter(function (item) { return String(item.boardId) === boardId; });
+  const board = findTableItemById_("boards", boardId);
+  const materials = rowsForBoard_("materials", boardId);
+  const submissions = rowsForBoard_("submissions", boardId);
+  const inkRows = rowsForBoard_("ink", boardId);
   const files = readTable_("files").filter(function (item) { return String(item.boardId) === boardId || submissions.some(function (submission) { return String(submission.id) === String(item.submissionId); }); });
   const driveIds = {};
   if (board && board.pdfFileId) driveIds[String(board.pdfFileId)] = true;
@@ -1853,16 +1939,7 @@ function deleteBoard_(payload) {
   readTable_("boards").filter(function (item) { return String(item.id) !== boardId; }).forEach(function (item) { if (item.pdfFileId) remainingDriveIds[String(item.pdfFileId)] = true; });
   readTable_("files").filter(function (item) { return String(item.boardId) !== boardId; }).forEach(function (item) { if (item.driveId) remainingDriveIds[String(item.driveId)] = true; });
   readTable_("submissions").filter(function (item) { return String(item.boardId) !== boardId; }).forEach(function (submission) { submissionDriveIds_(submission).forEach(function (driveId) { remainingDriveIds[driveId] = true; }); });
-  let trashedDriveFiles = 0;
-  Object.keys(driveIds).forEach(function (driveId) {
-    if (!driveId || remainingDriveIds[driveId]) return;
-    try {
-      DriveApp.getFileById(driveId).setTrashed(true);
-      trashedDriveFiles += 1;
-    } catch (error) {
-      // 檔案可能已被手動移除，資料列仍要繼續清理。
-    }
-  });
+  const trashedDriveFiles = trashDriveFiles_(Object.keys(driveIds), remainingDriveIds);
   let trashedBoardFolder = false;
   try {
     const folder = getBoardFolderIfExists_(boardId);
@@ -1875,12 +1952,12 @@ function deleteBoard_(payload) {
   }
   const deleted = {
     files: deleteRows_("files", function (item) { return String(item.boardId) === boardId || submissions.some(function (submission) { return String(submission.id) === String(item.submissionId); }); }),
-    submissions: deleteRows_("submissions", function (item) { return String(item.boardId) === boardId; }),
-    areas: deleteRows_("areas", function (item) { return String(item.boardId) === boardId; }),
-    answerMasks: deleteRows_("answerMasks", function (item) { return String(item.boardId) === boardId; }),
-    ink: deleteRows_("ink", function (item) { return String(item.boardId) === boardId; }),
-    classroomState: deleteRows_("classroomState", function (item) { return String(item.boardId) === boardId; }),
-    materials: deleteRows_("materials", function (item) { return String(item.boardId) === boardId; }),
+    submissions: deleteRowsForBoard_("submissions", boardId),
+    areas: deleteRowsForBoard_("areas", boardId),
+    answerMasks: deleteRowsForBoard_("answerMasks", boardId),
+    ink: deleteRowsForBoard_("ink", boardId),
+    classroomState: deleteRowsForBoard_("classroomState", boardId),
+    materials: deleteRowsForBoard_("materials", boardId),
     boards: deleteRows_("boards", function (item) { return String(item.id) === boardId; })
   };
   return { ok: true, boardId: boardId, deleted: deleted, trashedDriveFiles: trashedDriveFiles, trashedBoardFolder: trashedBoardFolder };
@@ -1894,7 +1971,7 @@ function saveSubmission_(payload) {
   const nickname = cleanText_(payload.nickname, MAX_TEXT.nickname);
   if (!nickname) throw new Error("請先輸入暱稱。");
   const id = cleanText_(payload.id, 120) || makeId_("S");
-  const existing = readTable_("submissions").find(function (item) { return String(item.id) === id; });
+  const existing = findTableItemById_("submissions", id);
   const mutationId = cleanText_(payload.mutationId, 120);
   if (existing && mutationId && String(existing.mutationId || "") === mutationId) return { ok: true, submission: publicSubmission_(existing, false, materialId) };
   const imageIds = parseArray_(payload.keepImageFileIds).slice(0, 2);
@@ -1958,7 +2035,7 @@ function listSubmissions_(payload) {
 function saveFeedback_(payload) {
   requireManager_(payload);
   const rows = readTable_("submissions");
-  const item = rows.find(function (row) { return String(row.id) === String(payload.submissionId); });
+  const item = findItemById_(rows, payload.submissionId);
   if (!item) throw new Error("找不到指定作答紀錄。");
   const feedback = payload.strokes || { photoIndex: 0, strokes: [] };
   const comment = cleanText_(payload.comment, MAX_TEXT.comment);
@@ -1981,7 +2058,7 @@ function deleteSubmission_(payload) {
   const submissionId = cleanText_(payload.submissionId, 120);
   if (!submissionId) throw new Error("缺少作答紀錄 ID。");
   const rows = readTable_("submissions");
-  const item = rows.find(function (row) { return String(row.id) === submissionId; });
+  const item = findItemById_(rows, submissionId);
   if (!item) return { ok: true, submissionId: submissionId, deleted: 0 };
 
   const driveIds = submissionDriveIds_(item);
@@ -1997,12 +2074,7 @@ function deleteSubmission_(payload) {
     submissionDriveIds_(sub).forEach(function (dId) { remainingDriveIds[dId] = true; });
   });
 
-  driveIds.forEach(function (driveId) {
-    if (remainingDriveIds[driveId]) return;
-    try {
-      DriveApp.getFileById(driveId).setTrashed(true);
-    } catch (error) {}
-  });
+  trashDriveFiles_(driveIds, remainingDriveIds);
 
   deleteRows_("files", function (file) {
     return String(file.boardId) === String(item.boardId) && String(file.submissionId) === submissionId;
@@ -2022,7 +2094,7 @@ function getFile_(payload) {
   const index = readTable_("files").find(function (item) { return String(item.driveId) === fileId; });
   if (!index) throw new Error("找不到檔案索引。");
   if (payload.boardId && String(index.boardId) !== String(payload.boardId)) throw new Error("檔案與版面不一致。");
-  if (payload.materialId && String(index.materialId || legacyMaterialId_(index.boardId)) !== String(payload.materialId)) throw new Error("檔案與教材不一致。");
+  if (payload.materialId && materialIdOf_(index, index.boardId) !== String(payload.materialId)) throw new Error("檔案與教材不一致。");
   const file = DriveApp.getFileById(fileId);
   const blob = file.getBlob();
   const bytes = blob.getBytes();
@@ -2045,6 +2117,12 @@ function settingsInfo_() {
     driveRootFolderName: settings.DriveRootFolderName || "PDF互動講義檔案"
   };
 }
+
+/**
+ * 【第 4 區 API ROUTER】（範圍：第 2127 至 2223 行）
+ * doGet、doPost 與寫入鎖、冪等判斷等入口輔助。action 名稱與回傳 JSON 為對外契約。
+ * 註：settingsInfo_ 屬第 3 區，因緊鄰路由而保留原位置。
+ */
 
 function withLock_(callback) {
   const lock = LockService.getScriptLock();

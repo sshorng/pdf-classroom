@@ -668,7 +668,38 @@
   </div>
   <div class="toast-stack" id="toastStack"></div>
 
+    // ============================================================================
+    // ============================================================================
+    // 架構索引：本檔前端採五層防腐架構，程式碼依下列分區順序排列。
+    // 新增功能時先確認自己屬於哪一層，不要跨越防火牆。
+    //
+    //   第 0 區  CONFIG       常數、資源網址、預設部署網址。
+    //   第 1 區  STATE        唯一集中式狀態與跨請求旗標。
+    //   第 2 區  PDF ENGINE   PDF.js 與 PDFium 文件快取。
+    //   第 3 區  PURE ENGINE  零 DOM、零網路的座標、幾何、正規化與識別碼運算。
+    //   第 4 區  UI SHELL     Modal、Toast、連線狀態、設定與分享。
+    //   第 5 區  UI VIEW      公告列表、表單、抽屜與下拉重整。
+    //   第 6 區  LOCAL        IndexedDB 與本機示範後端。
+    //   第 7 區  API ADAPTER  請求層、離線佇列、本機優先快取與檔案載入。
+    //   第 8 區  ROUTER       入口分流與各頁外框。
+    //   第 9 區  UI VIEW      編輯頁工具與 PDF 手勢縮放。
+    //   第 10 區 SYNC         教師筆跡與課堂狀態同步。
+    //   第 11 區 UI VIEW      教材切換。
+    //   第 12 區 INK ENGINE   觸控筆分流、筆畫生命週期與繪製。
+    //   第 13 區 UI VIEW      答案遮罩、版面區域與教材管理。
+    //   第 14 區 UI VIEW      PDF 渲染與學生作答。
+    //   第 15 區 SYNC         outbox 補傳與遠端結果套用。
+    //   第 16 區 UI VIEW      課堂批改與回饋。
+    //   第 17 區 BOOTSTRAP    初始化。
+    //
+    // 鐵則：PURE ENGINE 不得讀取 DOM、不得發網路請求、不得寫入 state；
+    //       事件監聽器只負責取值與渲染，業務計算一律呼叫 PURE ENGINE。
+    // ============================================================================
+
   <script>
+    // ============================================================================
+    // 第 0 區｜CONFIG：常數與資源位址
+    // ============================================================================
     // ============================================================
     // GAS URL 優先序：網址參數 > LocalStorage > 原始碼預設值
     // 分享網址或設定視窗可覆寫舊版部署網址，避免舊端點造成假性斷線。
@@ -709,6 +740,10 @@
     const PDF_MAX_CANVAS_DIMENSION = 4096;
     const GAS_URL = resolveGasUrl();
 
+    // ============================================================================
+    // 第 1 區｜STATE：唯一集中式狀態
+    // 業務運算一律讀 state 或函式參數，不得從 DOM 取值當資料來源。
+    // ============================================================================
     const state = {
       demo: localStorage.getItem(APP_KEY + "demo") === "1",
       view: "portal",
@@ -811,6 +846,10 @@
     let announcementRequestSequence = 0;
     let pdfJsPromise = null;
 
+    // ============================================================================
+    // 第 2 區｜PDF ENGINE：PDF.js 與 PDFium 文件快取
+    // 外部字型與 cmap 資源只在此區載入，其餘程式碼不得直接碰外部 CDN。
+    // ============================================================================
     function pdfDocumentOptions(bytes) {
       return {
         data: bytes && typeof bytes.slice === "function" ? bytes.slice() : bytes,
@@ -963,6 +1002,69 @@
       }
     }
 
+    // ============================================================================
+    // 第 3 區｜PURE ENGINE：零 DOM、零網路
+    // 座標、幾何、壓力、正規化、識別碼與排序皆在此。不得讀取 document，
+    // 不得發送請求，不得寫入 state。UI 與同步層只能呼叫，不得複製實作。
+    // ============================================================================
+    // --- 座標、壓力與縮放 --------------------------------------------------------
+    function pointerPressure(event) {
+      const isPen = Boolean(event && event.pointerType === "pen");
+      const pressure = Number(event && event.pressure);
+      return isPen && Number.isFinite(pressure) && pressure > 0 ? pressure : 0.5;
+    }
+
+    function normalizedPointFromRect(clientX, clientY, rect, pressure) {
+      const width = Number(rect && rect.width) || 1;
+      const height = Number(rect && rect.height) || 1;
+      const left = Number(rect && rect.left) || 0;
+      const top = Number(rect && rect.top) || 0;
+      return {
+        x: clamp((Number(clientX) - left) / width, 0, 1),
+        y: clamp((Number(clientY) - top) / height, 0, 1),
+        pressure: Number.isFinite(pressure) ? pressure : 0.5
+      };
+    }
+
+    function pinchDistance(touches) {
+      if (!touches || touches.length < 2) return 0;
+      return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    }
+
+    function roundedZoom(value, min, max) {
+      return clamp(Math.round(Number(value) * 100) / 100, min, max);
+    }
+
+    // --- 幾何與擦除判定 ----------------------------------------------------------
+    function distanceToSegment(point, start, end) {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      if (!dx && !dy) return Math.hypot(point.x - start.x, point.y - start.y);
+      const ratio = clamp(((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy), 0, 1);
+      return Math.hypot(point.x - (start.x + ratio * dx), point.y - (start.y + ratio * dy));
+    }
+
+    function strokeEraseThreshold(stroke) {
+      const width = Number(stroke && stroke.width || .005);
+      const multiplier = stroke && stroke.tool === "highlighter" ? 6 : 1;
+      return Math.max(0.015, width * multiplier * 1.6);
+    }
+
+    function eraseStrokesAtPoint(strokes, point) {
+      return (strokes || []).filter(function (stroke) {
+        const threshold = strokeEraseThreshold(stroke);
+        const points = Array.isArray(stroke.points) ? stroke.points : [];
+        for (let index = 0; index < points.length; index += 1) {
+          if (distanceToSegment(point, points[index], points[index + 1] || points[index]) <= threshold) return false;
+        }
+        return true;
+      });
+    }
+
+    // --- 字串組合 ----------------------------------------------------------------
+    function photoThumbHtml(source, alt, deleteAttribute, deleteValue) {
+      return "<div class=\"photo-thumb\"><img src=\"" + source + "\" alt=\"" + escapeHtml(alt) + "\"><button class=\"photo-delete-btn\" data-" + deleteAttribute + "=\"" + escapeHtml(String(deleteValue)) + "\" type=\"button\" title=\"刪除這張照片\" aria-label=\"刪除照片\">×</button></div>";
+    }
     function resolveGasUrl() {
       const params = new URLSearchParams(window.location.search);
       const config = params.get("config");
@@ -1234,6 +1336,10 @@
       return "S-" + hashString(boardId + materialPart + "|" + areaId + "|" + nickname);
     }
 
+    // ============================================================================
+    // 第 4 區｜UI SHELL：Modal、Toast、連線狀態、設定與分享
+    // 原生 alert、confirm、prompt 一律禁用，統一走 showModal。
+    // ============================================================================
     function showToast(message, type) {
       const toast = document.createElement("div");
       toast.className = "toast" + (type ? " " + type : "");
@@ -1612,6 +1718,9 @@
       await loadAnnouncements();
     }
 
+    // ============================================================================
+    // 第 5 區｜UI VIEW：公告與下拉重整
+    // ============================================================================
     function announcementSurfaceHtml(surface, canManage, compact) {
       const title = surface === "student" ? "課堂公告" : "公告與常用連結";
       const description = "";
@@ -2017,6 +2126,10 @@
       }
     }
 
+    // ============================================================================
+    // 第 6 區｜LOCAL：IndexedDB 與本機示範後端
+    // 示範模式與離線回退共用此層，資料格式必須與 GAS 回應一致。
+    // ============================================================================
     function openLocalDb() {
       if (!window.indexedDB) { persistentStorageAvailable = false; return Promise.resolve(null); }
       if (dbPromise) return dbPromise;
@@ -2258,12 +2371,38 @@
       return response;
     }
 
+    // 本機示範後端：依網域分派到具名處理器，處理器只認自己那一組 action。
+    // 回傳格式必須與 Code.gs 對應 action 一致，其餘前端程式碼不需要知道現在是本機或雲端。
+    const LOCAL_ACTION_ROUTES = [
+      { actions: ["settings", "verifyAdmin", "logoutAdmin", "sheetUrl"], handler: localStaticActions },
+      { actions: ["listAnnouncements", "createAnnouncement", "updateAnnouncement", "reorderAnnouncements", "deleteAnnouncement"], handler: localAnnouncementActions },
+      { actions: ["listInk", "saveInk", "classroomSync", "saveClassroomState"], handler: localInkAndClassroomActions },
+      { actions: ["listPublicBoards", "listBoards", "getBoard", "getFile", "createBoard", "updateBoard", "createMaterial", "updateMaterial", "deleteMaterial", "archiveBoard", "deleteBoard"], handler: localBoardActions },
+      { actions: ["saveSubmission", "listSubmissions", "saveFeedback", "deleteSubmission"], handler: localSubmissionActions }
+    ];
+
+    function localHandlerFor(action) {
+      const name = String(action || "");
+      for (let index = 0; index < LOCAL_ACTION_ROUTES.length; index += 1) {
+        if (LOCAL_ACTION_ROUTES[index].actions.indexOf(name) > -1) return LOCAL_ACTION_ROUTES[index].handler;
+      }
+      return null;
+    }
+
     async function localRequest(action, payload) {
-      const data = payload || {};
+      const handler = localHandlerFor(action);
+      if (!handler) throw new Error("未知的本機操作。");
+      return handler(action, payload || {});
+    }
+
+    async function localStaticActions(action, data) {
       if (action === "settings") return { ok: true, settings: { adminConfigured: false, maxImageBytes: MAX_IMAGE_BYTES, maxPdfBytes: MAX_PDF_BYTES } };
       if (action === "verifyAdmin") return { ok: true, token: "local-admin", configured: false };
       if (action === "logoutAdmin") return { ok: true, loggedOut: true };
       if (action === "sheetUrl") return { ok: true, url: "" };
+    }
+
+    async function localAnnouncementActions(action, data) {
       if (action === "listAnnouncements") return localAnnouncementResponse();
       if (action === "createAnnouncement") {
         const title = String(data.title || "").trim().slice(0, 100);
@@ -2339,6 +2478,9 @@
         response.deleted = existing ? 1 : 0;
         return response;
       }
+    }
+
+    async function localInkAndClassroomActions(action, data) {
       if (action === "listInk") {
         const inkRows = (await localAll("ink")).filter(function (item) { return String(item.boardId) === String(data.boardId); });
         const materialId = data.materialId ? String(data.materialId) : "";
@@ -2384,6 +2526,9 @@
         await localPut("classroomState", classroomState);
         return { ok: true, state: classroomState };
       }
+    }
+
+    async function localBoardActions(action, data) {
       if (action === "listPublicBoards") return { ok: true, data: (await localAll("boards")).filter(function (board) { return board.status !== "封存"; }).map(publicBoardSummary) };
       if (action === "listBoards") return { ok: true, data: (await localAll("boards")).filter(function (board) { return board.status !== "封存"; }) };
       if (action === "getBoard") {
@@ -2533,6 +2678,9 @@
         const deleted = await removeLocalBoardData(data.boardId);
         return { ok: true, board: board, deleted: deleted };
       }
+    }
+
+    async function localSubmissionActions(action, data) {
       if (action === "saveSubmission") {
         const board = await localGet("boards", data.boardId);
         if (!board) throw new Error("找不到指定教材版面。");
@@ -2609,6 +2757,10 @@
       throw new Error("未知的本機操作。");
     }
 
+    // ============================================================================
+    // 第 7 區｜API ADAPTER：請求層、本機優先快取與檔案載入
+    // 所有網路請求都經由 gasGet、gasPost 與 api，不得在事件監聽器直接 fetch。
+    // ============================================================================
     class ApiError extends Error {
       constructor(message, network, aborted) {
         super(message);
@@ -3073,6 +3225,10 @@
       return state.board;
     }
 
+    // ============================================================================
+    // 第 8 區｜ROUTER：入口分流與各頁外框
+    // 每次路由載入都帶 generation，舊的渲染不得覆蓋新的路由。
+    // ============================================================================
     function isTeacherView(view) {
       return ["manager", "editor", "review"].indexOf(view) > -1;
     }
@@ -3393,6 +3549,10 @@
        if (!isCurrentRouteLoad(generation, "editor", boardId)) return;
     }
 
+    // ============================================================================
+    // 第 9 區｜UI VIEW：編輯頁工具與 PDF 手勢
+    // 手勢只處理瀏覽器事件，不放業務計算。
+    // ============================================================================
      function bindEditorEvents() {
         setupTeacherPdfWorkspace(false);
         ensureMaterialControls("editor");
@@ -3500,13 +3660,6 @@
       let isPinching = false;
       let lastPinchScale = 1;
 
-      function getPinchDist(e) {
-        if (!e.touches || e.touches.length < 2) return 0;
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        return Math.hypot(dx, dy);
-      }
-
         scroll.addEventListener("touchstart", function (event) {
           if (touchEventHasStylus(event)) return;
           if (event.touches.length === 2) {
@@ -3514,7 +3667,7 @@
            isPinching = true;
           startTouch = null;
           lastTouch = null;
-          initialPinchDistance = getPinchDist(event);
+          initialPinchDistance = pinchDistance(event.touches);
           initialZoom = state.zoom || 1;
           lastPinchScale = 1;
           const stage = scroll.querySelector(".page-stage");
@@ -3539,7 +3692,7 @@
           if (touchEventHasStylus(event)) return;
           if (event.touches.length === 2 && isPinching && initialPinchDistance > 0) {
           event.preventDefault();
-          const currDist = getPinchDist(event);
+          const currDist = pinchDistance(event.touches);
           if (currDist > 0) {
             lastPinchScale = currDist / initialPinchDistance;
             const stage = scroll.querySelector(".page-stage");
@@ -3679,6 +3832,10 @@
       if (status) status.textContent = message;
     }
 
+    // ============================================================================
+    // 第 10 區｜SYNC：教師筆跡與課堂狀態
+    // 本地修訂版號優先，輪詢只在版本變更時拉取內容。
+    // ============================================================================
       async function loadTeacherInk(materialId, selectionToken) {
         const boardIdAtStart = String(state.boardId || "");
         const targetMaterialId = String(materialId || state.activeMaterialId || legacyMaterialId(boardIdAtStart));
@@ -4188,6 +4345,10 @@
       state.pollTimer = window.setInterval(function () { pollClassroomView(); }, CLASSROOM_POLL_INTERVAL);
     }
 
+    // ============================================================================
+    // 第 11 區｜UI VIEW：教材切換
+    // 切換教材時必須讓舊載入請求失效，避免舊結果覆蓋新教材。
+    // ============================================================================
     function renderMaterialControls() {
       document.querySelectorAll("[data-material-controls]").forEach(function (controls) {
         const select = controls.querySelector("[data-material-select]");
@@ -4413,6 +4574,11 @@
       }
     }
 
+    // ============================================================================
+    // 第 12 區｜INK ENGINE：觸控分流、筆畫生命週期與繪製
+    // 事件監聽器只取值與渲染；座標轉換、壓力、擦除判定一律呼叫第 3 區純函式。
+    // 教師筆跡與批改筆跡共享本區原語，只有狀態歸屬與儲存方式不同。
+    // ============================================================================
      let teacherInkActivePointerId = null;
      let teacherInkActiveStroke = null;
      let teacherInkSession = null;
@@ -4504,12 +4670,16 @@
       return false;
     }
 
-    function trackTeacherTouchPointer(event, active) {
-      if (!event || event.pointerType !== "touch" || event.pointerId === undefined) return;
+    function trackTouchPointer(pointerIds, event, active) {
+      if (!event || event.pointerType !== "touch" || event.pointerId === undefined) return false;
       const id = String(event.pointerId);
-      if (active) teacherTouchPointerIds.add(id);
-      else teacherTouchPointerIds.delete(id);
-      if (!teacherTouchPointerIds.size) teacherTouchGesture = false;
+      if (active) pointerIds.add(id);
+      else pointerIds.delete(id);
+      return pointerIds.size === 0;
+    }
+
+    function trackTeacherTouchPointer(event, active) {
+      if (trackTouchPointer(teacherTouchPointerIds, event, active)) teacherTouchGesture = false;
     }
 
     function discardTeacherInkForTouchGesture() {
@@ -4563,28 +4733,42 @@
       if (touch) cancelTeacherInk(touchPointerEvent(touch, event, teacherInkActivePointerId, event.currentTarget));
     }
 
-     function bindTeacherInkCanvas() {
-       const canvas = document.getElementById("inkCanvas");
-       if (!canvas || canvas.dataset.bound === "1") return;
-       canvas.dataset.bound = "1";
-       const target = canvas.parentElement || canvas;
-       target.dataset.teacherInkBound = "1";
-       target.style.touchAction = "none";
-       canvas.style.touchAction = "none";
-       canvas.style.willChange = "transform";
-       target.addEventListener("pointerdown", beginTeacherInk);
-       target.addEventListener("pointerover", moveTeacherInk);
-       target.addEventListener("pointerout", moveTeacherInk);
-       target.addEventListener("pointermove", moveTeacherInk);
-       target.addEventListener("pointerrawupdate", moveTeacherInk);
-       target.addEventListener("pointerup", finishTeacherInk);
-       target.addEventListener("pointercancel", cancelTeacherInk);
-       target.addEventListener("lostpointercapture", cancelTeacherInk);
-       target.addEventListener("touchstart", beginTeacherInkTouch, { passive: false });
-       target.addEventListener("touchmove", moveTeacherInkTouch, { passive: false });
-       target.addEventListener("touchend", finishTeacherInkTouch, { passive: false });
-       target.addEventListener("touchcancel", cancelTeacherInkTouch, { passive: false });
-     }
+    // 教師畫布與批改畫布的綁定完全一致，只差處理函式；統一在此綁定，避免兩份事件清單走鐘。
+    function bindInkSurface(canvas, handlers, options) {
+      if (!canvas || canvas.dataset.bound === "1") return;
+      const settings = options || {};
+      canvas.dataset.bound = "1";
+      const target = canvas.parentElement || canvas;
+      if (settings.teacherBound) target.dataset.teacherInkBound = "1";
+      target.style.touchAction = "none";
+      canvas.style.touchAction = "none";
+      canvas.style.willChange = "transform";
+      target.addEventListener("pointerdown", handlers.begin);
+      target.addEventListener("pointerover", handlers.move);
+      target.addEventListener("pointerout", handlers.move);
+      target.addEventListener("pointermove", handlers.move);
+      target.addEventListener("pointerrawupdate", handlers.move);
+      target.addEventListener("pointerup", handlers.finish);
+      target.addEventListener("pointercancel", handlers.cancel);
+      target.addEventListener("lostpointercapture", handlers.cancel);
+      target.addEventListener("touchstart", handlers.touchBegin, { passive: false });
+      target.addEventListener("touchmove", handlers.touchMove, { passive: false });
+      target.addEventListener("touchend", handlers.touchFinish, { passive: false });
+      target.addEventListener("touchcancel", handlers.touchCancel, { passive: false });
+    }
+
+    function bindTeacherInkCanvas() {
+      bindInkSurface(document.getElementById("inkCanvas"), {
+        begin: beginTeacherInk,
+        move: moveTeacherInk,
+        finish: finishTeacherInk,
+        cancel: cancelTeacherInk,
+        touchBegin: beginTeacherInkTouch,
+        touchMove: moveTeacherInkTouch,
+        touchFinish: finishTeacherInkTouch,
+        touchCancel: cancelTeacherInkTouch
+      }, { teacherBound: true });
+    }
 
      function canStartTeacherInk(event, canvas) {
        const target = event && event.target;
@@ -4826,29 +5010,12 @@
        const materialId = String(settings.materialId || state.activeMaterialId || legacyMaterialId(boardId));
        const page = Number(settings.page !== undefined ? settings.page : state.currentPage) || 1;
       const strokes = teacherInkForPage(page, materialId);
-      const kept = strokes.filter(function (stroke) {
-        const strokeW = Number(stroke.width || .005);
-        const mult = stroke.tool === "highlighter" ? 6 : 1;
-        const threshold = Math.max(0.015, strokeW * mult * 1.6);
-        const points = Array.isArray(stroke.points) ? stroke.points : [];
-        for (let index = 0; index < points.length; index += 1) {
-          if (distanceToSegment(point, points[index], points[index + 1] || points[index]) <= threshold) return false;
-        }
-        return true;
-      });
+      const kept = eraseStrokesAtPoint(strokes, point);
       if (kept.length !== strokes.length) {
         state.teacherInk.set(materialInkKey(materialId, page), kept);
         teacherInkChanged = true;
         renderTeacherInk();
       }
-    }
-
-    function distanceToSegment(point, start, end) {
-      const dx = end.x - start.x;
-      const dy = end.y - start.y;
-      if (!dx && !dy) return Math.hypot(point.x - start.x, point.y - start.y);
-      const ratio = clamp(((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy), 0, 1);
-      return Math.hypot(point.x - (start.x + ratio * dx), point.y - (start.y + ratio * dy));
     }
 
     function renderTeacherInk() {
@@ -4956,6 +5123,10 @@
        return (Number(a.page) || 1) - (Number(b.page) || 1) || (Number(a.y) || 0) - (Number(b.y) || 0) || (Number(a.x) || 0) - (Number(b.x) || 0) || (Number(a.order) || 0) - (Number(b.order) || 0) || String(a.id || "").localeCompare(String(b.id || ""));
      }
 
+    // ============================================================================
+    // 第 13 區｜UI VIEW：答案遮罩與版面區域
+    // 遮罩與圖釘各自獨立座標，不得互相重用。
+    // ============================================================================
      function currentMaterialAnswerMasks() {
        const materialId = String(state.activeMaterialId || legacyMaterialId(state.boardId));
        return (state.answerMasks || []).filter(function (mask) { return String(mask.materialId || legacyMaterialId(state.boardId)) === materialId; }).sort(compareAnswerMasksByPosition);
@@ -5478,6 +5649,10 @@
        }
      }
 
+    // ============================================================================
+    // 第 14 區｜UI VIEW：PDF 渲染與學生作答
+    // 渲染只讀 state，不寫入教材資料；學生送出前一律先落地本機再由 outbox 補傳。
+    // ============================================================================
     function renderPdfPage() {
       const token = ++state.renderToken;
       if (activePdfRenderTask && typeof activePdfRenderTask.cancel === "function") activePdfRenderTask.cancel();
@@ -5735,7 +5910,7 @@
     }
 
     function setZoom(value) {
-      state.zoom = clamp(Math.round(value * 100) / 100, .5, 3.0);
+      state.zoom = roundedZoom(value, .5, 3.0);
       renderPdfPage();
       if (state.view === "student") saveStudentMaterialPosition();
       else scheduleClassroomStateSave();
@@ -6026,7 +6201,7 @@
       const container = document.getElementById("newPhotoPreview");
       if (!container) return;
       container.innerHTML = (state.pendingStudentImages || []).map(function (image, index) {
-        return "<div class=\"photo-thumb\"><img src=\"" + image.data + "\" alt=\"待上傳答案照片\"><button class=\"photo-delete-btn\" data-delete-pending-idx=\"" + index + "\" type=\"button\" title=\"刪除這張照片\" aria-label=\"刪除照片\">×</button></div>";
+        return photoThumbHtml(image.data, "待上傳答案照片", "delete-pending-idx", index);
       }).join("");
       container.querySelectorAll("[data-delete-pending-idx]").forEach(function (btn) {
         btn.addEventListener("click", async function (e) {
@@ -6058,7 +6233,7 @@
         return;
       }
       container.innerHTML = "<p class=\"helper\" style=\"margin-top:12px;\">目前已保存的照片（可點擊「×」刪除）：</p><div class=\"photo-preview-grid\">" + state.activeStudentImages.map(function (image) {
-        return "<div class=\"photo-thumb\"><img src=\"" + image.dataUrl + "\" alt=\"已保存答案照片\"><button class=\"photo-delete-btn\" data-delete-existing-id=\"" + escapeHtml(image.id) + "\" type=\"button\" title=\"刪除這張照片\" aria-label=\"刪除照片\">×</button></div>";
+        return photoThumbHtml(image.dataUrl, "已保存答案照片", "delete-existing-id", image.id);
       }).join("") + "</div>";
       container.querySelectorAll("[data-delete-existing-id]").forEach(function (btn) {
         btn.addEventListener("click", function (e) {
@@ -6115,32 +6290,6 @@
       }
     }
 
-    function drawNormalizedStrokes(canvas, strokes) {
-      if (!canvas) return;
-      const context = canvas.getContext("2d");
-      const scale = canvasOutputScale();
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      const logicalWidth = Number(canvas.dataset.logicalWidth || canvas.clientWidth || canvas.width / scale);
-      const logicalHeight = Number(canvas.dataset.logicalHeight || canvas.clientHeight || canvas.height / scale);
-      context.save();
-      context.scale(scale, scale);
-      (strokes || []).forEach(function (stroke) {
-        if (!stroke.points || stroke.points.length < 1) return;
-        context.beginPath();
-        context.lineCap = "round";
-        context.lineJoin = "round";
-        context.strokeStyle = stroke.color || "#d34f42";
-        context.lineWidth = Math.max(1, Number(stroke.width || .008) * Math.min(logicalWidth, logicalHeight));
-        stroke.points.forEach(function (point, index) {
-          const x = Number(point.x || 0) * logicalWidth;
-          const y = Number(point.y || 0) * logicalHeight;
-          if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
-        });
-        context.stroke();
-      });
-      context.restore();
-    }
-
     async function submitStudentAnswer() {
       const nickname = String(state.nickname || "").trim();
       const textField = document.getElementById("studentTextAnswer");
@@ -6168,6 +6317,10 @@
       }
     }
 
+    // ============================================================================
+    // 第 15 區｜SYNC：outbox 補傳與遠端結果套用
+    // 本機先寫、遠端後送；遠端結果不得覆蓋較新的本機版本。
+    // ============================================================================
     function outboxId(action, payload) {
       const data = payload || {};
       const key = data.clientBoardId || data.id || data.submissionId || data.materialId || data.boardId || createId("job");
@@ -6335,6 +6488,10 @@
       }
     }
 
+    // ============================================================================
+    // 第 16 區｜UI VIEW：課堂批改
+    // 批改筆跡與教師課堂筆跡共用第 12 區的觸控與繪製原語，只在狀態歸屬上分流。
+    // ============================================================================
     function mountClassroomPdf() {
       const main = document.getElementById("appMain");
       const reviewGrid = main.querySelector(".review-grid");
@@ -6803,20 +6960,13 @@
       let lastTouch = null;
       let singleTouchMoved = false;
 
-      function getPinchDist(e) {
-        if (!e.touches || e.touches.length < 2) return 0;
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        return Math.hypot(dx, dy);
-      }
-
        stage.addEventListener("touchstart", function (event) {
          if (touchEventHasStylus(event)) return;
          if (event.touches.length === 2) {
            isReviewPinching = true;
            lastTouch = null;
            cancelReviewStroke();
-           initialPinchDistance = getPinchDist(event);
+            initialPinchDistance = pinchDistance(event.touches);
           initialZoom = state.reviewZoom || 1;
           lastPinchScale = 1;
           const wrap = stage.querySelector(".review-image-wrap");
@@ -6837,7 +6987,7 @@
          if (touchEventHasStylus(event)) return;
          if (event.touches.length === 2 && isReviewPinching && initialPinchDistance > 0) {
           event.preventDefault();
-          const currDist = getPinchDist(event);
+           const currDist = pinchDistance(event.touches);
           if (currDist > 0) {
             lastPinchScale = currDist / initialPinchDistance;
             const targetZoom = clamp(initialZoom * lastPinchScale, 0.6, 4.0);
@@ -6919,7 +7069,7 @@
     }
 
     function setReviewZoom(newZoom) {
-      state.reviewZoom = clamp(Math.round(newZoom * 100) / 100, 0.6, 4.0);
+      state.reviewZoom = roundedZoom(newZoom, 0.6, 4.0);
       const stage = document.getElementById("reviewImageStage");
       if (!stage) return;
       const wrap = stage.querySelector(".review-image-wrap");
@@ -6976,10 +7126,9 @@
       });
     }
 
+    // DOM 黏著層：只取 bounding rect，座標與壓力計算留在第 3 區純函式。
     function canvasPoint(event, canvas) {
-      const rect = canvas.getBoundingClientRect();
-      const pressure = (event.pointerType === "pen" && typeof event.pressure === "number" && event.pressure > 0) ? event.pressure : 0.5;
-      return { x: clamp((event.clientX - rect.left) / rect.width, 0, 1), y: clamp((event.clientY - rect.top) / rect.height, 0, 1), pressure: pressure };
+      return normalizedPointFromRect(event.clientX, event.clientY, canvas.getBoundingClientRect(), pointerPressure(event));
     }
 
     let reviewActivePointerId = null;
@@ -6994,11 +7143,7 @@
     let reviewTouchGesture = false;
 
     function trackReviewTouchPointer(event, active) {
-      if (!event || event.pointerType !== "touch" || event.pointerId === undefined) return;
-      const id = String(event.pointerId);
-      if (active) reviewTouchPointerIds.add(id);
-      else reviewTouchPointerIds.delete(id);
-      if (!reviewTouchPointerIds.size) reviewTouchGesture = false;
+      if (trackTouchPointer(reviewTouchPointerIds, event, active)) reviewTouchGesture = false;
     }
 
     function discardReviewInkForTouchGesture() {
@@ -7127,24 +7272,16 @@
     }
 
     function bindReviewCanvas(canvas) {
-      if (!canvas || canvas.dataset.bound === "1") return;
-      canvas.dataset.bound = "1";
-      const target = canvas.parentElement || canvas;
-      canvas.style.touchAction = "none";
-      canvas.style.willChange = "transform";
-      target.style.touchAction = "none";
-      target.addEventListener("pointerdown", beginReviewInk);
-      target.addEventListener("pointerover", moveReviewInk);
-      target.addEventListener("pointerout", moveReviewInk);
-      target.addEventListener("pointermove", moveReviewInk);
-      target.addEventListener("pointerrawupdate", moveReviewInk);
-      target.addEventListener("pointerup", finishReviewStroke);
-      target.addEventListener("pointercancel", cancelReviewStroke);
-      target.addEventListener("lostpointercapture", cancelReviewStroke);
-      target.addEventListener("touchstart", beginReviewInkTouch, { passive: false });
-      target.addEventListener("touchmove", moveReviewInkTouch, { passive: false });
-      target.addEventListener("touchend", finishReviewInkTouch, { passive: false });
-      target.addEventListener("touchcancel", cancelReviewInkTouch, { passive: false });
+      bindInkSurface(canvas, {
+        begin: beginReviewInk,
+        move: moveReviewInk,
+        finish: finishReviewStroke,
+        cancel: cancelReviewStroke,
+        touchBegin: beginReviewInkTouch,
+        touchMove: moveReviewInkTouch,
+        touchFinish: finishReviewInkTouch,
+        touchCancel: cancelReviewInkTouch
+      });
     }
 
     function finishReviewStroke(event, cancelled) {
@@ -7204,16 +7341,7 @@
     }
 
     function eraseReviewStrokeAt(point) {
-      const kept = state.reviewStrokes.filter(function (stroke) {
-        const strokeW = Number(stroke.width || .005);
-        const mult = stroke.tool === "highlighter" ? 6 : 1;
-        const threshold = Math.max(0.015, strokeW * mult * 1.6);
-        const points = Array.isArray(stroke.points) ? stroke.points : [];
-        for (let index = 0; index < points.length; index += 1) {
-          if (distanceToSegment(point, points[index], points[index + 1] || points[index]) <= threshold) return false;
-        }
-        return true;
-      });
+      const kept = eraseStrokesAtPoint(state.reviewStrokes, point);
       if (kept.length !== state.reviewStrokes.length) {
         state.reviewStrokes = kept;
         reviewInkChanged = true;
@@ -7286,6 +7414,10 @@
       }
     }
 
+    // ============================================================================
+    // 第 17 區｜BOOTSTRAP：初始化入口
+    // 只做事件綁定與第一次路由渲染，不得在此堆疊業務邏輯。
+    // ============================================================================
     async function init() {
       bindStaticEvents();
       setConnectionBadge();

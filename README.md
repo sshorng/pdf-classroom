@@ -4,7 +4,7 @@
 
 ## 檔案
 
-- `index.html`：原生 HTML、Vanilla CSS 與 Vanilla JavaScript 前端。
+- `index.html`：原生 HTML、Vanilla CSS 與 Vanilla JavaScript 前端；內部依五層防腐架構切成 18 個分區，檔頭有架構索引（見「程式架構」）。
 - `Code.gs`：Google Apps Script API，使用 Google 試算表保存索引，使用 Google Drive 保存 PDF、照片與大型 JSON。
 - `rdq/`：已確認的 RDQ 需求規格卡。
 - `assets/`、`css/`、`js/`：預留的靜態資源資料夾；目前前端維持單檔，方便 GitHub Pages 或本機開啟。
@@ -24,7 +24,7 @@
 5. 執行身分選「我自己」，誰可以存取選「任何人」，完成部署。
 6. 前端以 `index.html` 的 `DEFAULT_GAS_URL` 作為預設網址；分享網址參數與設定視窗保存的網址可覆寫預設值，重新部署 GAS 後可直接更新設定或替換常數。
 7. 首次使用時，GAS 會自動建立「系統設定」、「公告連結」、「教材版面」、「問答區」、「答案遮罩」、「教師手寫」、「課堂狀態」、「作答紀錄」與「檔案索引」工作表，以及 Drive 根資料夾。
-8. 請在「系統設定」工作表填入 `AdminPassword`，教師入口與所有教師管理操作才會受到密語保護。
+8. 請在「系統設定」工作表填入 `AdminPassword`，教師入口與所有教師管理操作才會受到密語保護。教師登入 token 會持久保存，直到主動登出。
 9. `Code.gs` 更新後，請在「部署」中建立新版本；快取與背景佇列才會套用到 Web App。
 
 ### 公告多連結排查
@@ -47,8 +47,59 @@
 
 - 根網址是公開學生入口，免密碼顯示公告與所有啟用中的教材版面。
 - 學生可直接使用 `?view=student&board=...` 分享網址進入，不需要帳號或密碼；個別學生頁不顯示公告。
-- 教師由入口網站的「教師入口」開啟密語視窗；驗證成功後可使用管理、編輯與課堂頁。
+- 教師由入口網站的「教師入口」開啟密語視窗；驗證成功後可使用管理、編輯與課堂頁，登入狀態會保留至登出。登出時會同時清除瀏覽器保存的 token 並撤銷 GAS token。
 - 教師產生的分享網址與 QR Code 固定指向學生版，不提供教師管理網址。
+
+## 程式架構
+
+前端維持單檔 `index.html`，內部依五層防腐架構切成 18 個分區，檔頭有架構索引，每個分區都有橫幅標題。
+
+| 層 | 分區 | 職責 |
+|:---|:---|:---|
+| CONFIG | 第 0 區 | 常數與外部資源位址 |
+| STATE | 第 1 區 | 唯一集中式狀態與跨請求旗標 |
+| PDF ENGINE | 第 2 區 | PDF.js 與 PDFium 文件快取 |
+| PURE ENGINE | 第 3 區 | 零 DOM、零網路的座標、幾何、正規化與排序 |
+| UI SHELL | 第 4 區 | Modal、Toast、連線狀態、設定與分享 |
+| UI VIEW | 第 5、9、11、13、14、16 區 | 公告、編輯工具、教材切換、答案遮罩、學生作答與批改 |
+| LOCAL | 第 6 區 | IndexedDB 與本機示範後端，以動作分派表路由 |
+| API ADAPTER | 第 7 區 | 請求層、離線佇列、本機優先快取與檔案載入 |
+| ROUTER | 第 8 區 | 入口分流與各頁外框 |
+| SYNC | 第 10、15 區 | 教師筆跡、課堂狀態與 outbox 補傳 |
+| INK ENGINE | 第 12 區 | 觸控分流、筆畫生命週期與繪製 |
+| BOOTSTRAP | 第 17 區 | 初始化 |
+
+三條規矩：
+
+1. PURE ENGINE 的函式不得讀取 DOM、不得發網路請求、不得寫入 state。事件監聽器只取值與渲染，計算一律呼叫純函式。
+2. 教師筆跡與批改筆跡共用同一套觸控原語（canvasPoint、pinchDistance、eraseStrokesAtPoint、bindInkSurface），只有狀態歸屬與儲存方式不同，不要各自複製一份。
+3. 本機示範後端的 localRequest 只做分派，實際邏輯在 localAnnouncementActions、localInkAndClassroomActions、localBoardActions、localSubmissionActions。新增本機 action 時必須同步更新 LOCAL_ACTION_ROUTES，否則 tests/local-dispatch.js 會擋下來。
+
+後端 Code.gs 依同樣原則分成 CONFIG 與 SCHEMA、PURE ENGINE、DATA ACCESS ADAPTER、DOMAIN SERVICE、API ROUTER 五區，重複的資料列查找與 Drive 回收各自收斂為單一私有函式。
+
+## 測試
+
+不需要瀏覽器的靜態與 VM 測試，改動前後都要跑：
+
+```
+node tests/action-contract.js
+node tests/gas-startup-sync.js
+node tests/teacher-auth-persistence.js
+node tests/sync-payload-efficiency.js
+node tests/announcement-schema.js
+node tests/network-resilience.js
+node tests/runtime-smoke.js
+node tests/local-dispatch.js
+```
+
+tests 目錄下的 *-cdp.js 需要真實瀏覽器：先以 --remote-debugging-port=9224 開啟已載入教材版面（網址含 board 參數）的頁面，再執行對應測試。沒有實際的 GAS 部署與版面資料時，這批測試無法執行，不能用靜態測試代替。
+
+契約與標點檢查使用 gas-standalone-builder 的驗證器：
+
+```
+python -X utf8 <skill>/scripts/validate_contract.py index.html --branch frontend-db
+python -X utf8 <skill>/scripts/validate_punct.py index.html Code.gs README.md
+```
 
 ## 資料設計
 
