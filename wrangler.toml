@@ -13,7 +13,7 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "pdf-workbook-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "f0a48761-e64c-4dee-aa07-1352778d8a98"
 
 [[r2_buckets]]
 binding = "FILES"
