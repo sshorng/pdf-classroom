@@ -638,7 +638,7 @@
     <div class="modal-card">
       <button class="modal-close" type="button" data-close-settings aria-label="關閉">×</button>
       <h2>連線設定</h2>
-      <p class="modal-message">填入 GAS Web App 網址後，教材版面與作答資料就能在不同裝置間同步。</p>
+      <p class="modal-message">填入 API 端點網址後，教材版面與作答資料就能在不同裝置間同步。</p>
       <div class="field">
         <label for="gasUrlInput">API 端點網址（GAS Web App 或 Workers）</label>
         <input id="gasUrlInput" type="password" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec 或 https://你的名稱.workers.dev">
@@ -1068,6 +1068,13 @@
       return "<div class=\"photo-thumb\"><img src=\"" + source + "\" alt=\"" + escapeHtml(alt) + "\"><button class=\"photo-delete-btn\" data-" + deleteAttribute + "=\"" + escapeHtml(String(deleteValue)) + "\" type=\"button\" title=\"刪除這張照片\" aria-label=\"刪除照片\">×</button></div>";
     }
     function resolveApiUrl() {
+      // 端點升級旗標：新版首次啟動清除舊版留下的端點記憶，自動改走 Workers 預設值；
+      // 旗標設定後手動儲存的端點一律尊重，不再清除，GAS 退路不受影響。
+      const migrationKey = APP_KEY + "url_migration";
+      if (localStorage.getItem(migrationKey) !== "worker_v1") {
+        localStorage.removeItem(APP_KEY + "gas_url");
+        localStorage.setItem(migrationKey, "worker_v1");
+      }
       const params = new URLSearchParams(window.location.search);
       const config = params.get("config");
       if (config) {
@@ -1464,7 +1471,7 @@
         badge.textContent = "本機示範模式";
         badge.classList.add("is-demo");
       } else if (!GAS_URL) {
-        badge.textContent = "尚未設定 GAS";
+        badge.textContent = "尚未設定 API 端點";
       } else if (navigator.onLine === false || state.connectionStatus === "offline") {
         badge.textContent = "離線，等待補傳";
         badge.classList.add("is-offline");
@@ -1475,7 +1482,7 @@
         badge.textContent = "連線正常";
         badge.classList.add("is-online");
       } else {
-        badge.textContent = "GAS 已設定";
+        badge.textContent = "API 端點已設定";
       }
     }
 
