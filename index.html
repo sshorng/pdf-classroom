@@ -184,6 +184,7 @@
     .announcement-surface { margin: 30px 0 34px; padding: 22px; background: linear-gradient(135deg, #fffdf8 0%, #eef5ef 100%); border: 1px solid #dce7df; border-radius: 21px; box-shadow: var(--shadow-soft); }
     .announcement-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
     .announcement-heading .eyebrow { margin-bottom: 5px; }
+    .announcement-heading-actions { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; }
     .announcement-heading h2 { margin-bottom: 3px; font-size: 21px; }
     .announcement-heading p:last-child { margin-bottom: 0; color: var(--muted); font-size: 12px; }
     .announcement-list { display: flex; min-width: 0; flex-wrap: nowrap; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 2px 2px 10px; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-color: #b6c8bf transparent; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
@@ -660,6 +661,7 @@
       .board-grid { grid-template-columns: 1fr; }
       .announcement-surface { padding: 17px; }
       .announcement-heading { align-items: flex-start; flex-direction: column; }
+      .announcement-heading-actions { align-self: flex-end; }
       .announcement-heading > .button { align-self: flex-start; }
       .announcement-list { gap: 10px; }
       .announcement-link-row-fields { grid-template-columns: 1fr; gap: 6px; }
@@ -1938,7 +1940,7 @@
       const manageButton = canManage ? "<button class=\"button small primary\" data-announcement-add type=\"button\">＋ 新增公告</button>" : "";
       const collapsed = localStorage.getItem(APP_KEY + "announcement_collapsed") === "1";
       const collapseButton = "<button class=\"announcement-collapse-button\" data-announcement-collapse type=\"button\" title=\"" + (collapsed ? "展開公告" : "收合公告") + "\" aria-expanded=\"" + (collapsed ? "false" : "true") + "\">" + (collapsed ? "▼" : "▲") + "</button>";
-      return "<section class=\"announcement-surface" + (compact ? " announcement-surface-compact" : "") + (collapsed ? " is-collapsed" : "") + "\" data-announcement-surface=\"" + surface + "\"><div class=\"announcement-heading\"><div><p class=\"eyebrow\">CLASSROOM LINKS</p><h2>" + title + "</h2>" + description + "</div>" + manageButton + collapseButton + "</div><div class=\"announcement-list\" id=\"announcementList-" + surface + "\"><div class=\"inline-message\">正在讀取公告……</div></div></section>";
+      return "<section class=\"announcement-surface" + (compact ? " announcement-surface-compact" : "") + (collapsed ? " is-collapsed" : "") + "\" data-announcement-surface=\"" + surface + "\"><div class=\"announcement-heading\"><div><p class=\"eyebrow\">CLASSROOM LINKS</p><h2>" + title + "</h2>" + description + "</div><div class=\"announcement-heading-actions\">" + collapseButton + manageButton + "</div></div><div class=\"announcement-list\" id=\"announcementList-" + surface + "\"><div class=\"inline-message\">正在讀取公告……</div></div></section>";
     }
 
     function renderAnnouncementList(surface) {
