@@ -3096,7 +3096,7 @@
     }
 
     async function promptAdminLogin() {
-      const result = await openFormModal("教師管理驗證", "<form><div class=\"field\"><label for=\"adminPasswordField\">管理密語</label><input id=\"adminPasswordField\" name=\"password\" type=\"password\" autocomplete=\"current-password\" required></div><p class=\"helper\">教師管理密語由「系統設定」工作表的 AdminPassword 管理，登入狀態會保留至主動登出。</p></form>", "驗證", async function (formData) {
+      const result = await openFormModal("教師管理驗證", "<form><div class=\"field\"><label for=\"adminPasswordField\">管理密語</label><input id=\"adminPasswordField\" name=\"password\" type=\"password\" autocomplete=\"current-password\" required></div><p class=\"helper\">教師管理密語於首次登入時自動建立，登入狀態會保留至主動登出。</p></form>", "驗證", async function (formData) {
         const response = await gasPost("verifyAdmin", { password: formData.get("password") || "", clientId: state.clientId });
           state.adminToken = response.token || "";
           if (state.adminToken) localStorage.setItem(APP_KEY + "admin_token", state.adminToken);

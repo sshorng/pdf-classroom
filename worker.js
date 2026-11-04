@@ -536,7 +536,7 @@ async function revokeAdminToken_(payload) {
 }
 
 function adminPasswordRequiredMessage_() {
-  return "尚未設定教師管理密語，請先在「系統設定」工作表填入 AdminPassword。";
+  return "尚未設定教師管理密語，請在教師入口首次登入時輸入，輸入成功即自動建立。";
 }
 
 async function requireManager_(payload) {
@@ -547,13 +547,46 @@ async function requireManager_(payload) {
 
 async function verifyAdmin_(payload) {
   const configured = await getSetting_("AdminPassword");
-  if (!configured) throw new Error(adminPasswordRequiredMessage_());
   if (await isAdminToken_(payload && payload.adminToken)) {
     await persistAdminToken_(payload.adminToken);
     return { ok: true, token: String(payload.adminToken), persistent: true, configured: true };
   }
-  if (String(payload.password || "") !== configured) throw new Error("教師管理密語不正確。");
+  const provided = String((payload && payload.password) || "");
+  if (!configured) {
+    /* Workers 版沒有試算表可填密碼：首次登入輸入的密語即自動建立為 AdminPassword。 */
+    if (!provided) throw new Error(adminPasswordRequiredMessage_());
+    await writeSetting_("AdminPassword", provided);
+    return { ok: true, token: await issueAdminToken_(), persistent: true, configured: true, firstTimeSetup: true };
+  }
+  if (provided !== configured) throw new Error("教師管理密語不正確。");
   return { ok: true, token: await issueAdminToken_(), persistent: true, configured: true };
+}
+
+/* 設定寫入：Workers 版以設定動作取代 GAS 的試算表手動填寫，僅允許白名單鍵值。 */
+const SETTINGS_WRITABLE_KEYS = ["AdminPassword", "GeminiAPIKey"];
+
+async function writeSetting_(key, value) {
+  const db = database_();
+  await db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?1, ?2)").bind(String(key), "").run();
+  await db.prepare("UPDATE settings SET value = ?2 WHERE key = ?1").bind(String(key), String(value || "")).run();
+  clearAllTableCaches_();
+}
+
+async function updateSettings_(payload) {
+  await requireManager_(payload);
+  const updates = (payload && payload.settings) || {};
+  const updatedKeys = [];
+  for (let index = 0; index < SETTINGS_WRITABLE_KEYS.length; index += 1) {
+    const key = SETTINGS_WRITABLE_KEYS[index];
+    if (Object.prototype.hasOwnProperty.call(updates, key)) {
+      const value = String(updates[key] || "").trim();
+      if (key === "AdminPassword" && value.length < 4) throw new Error("教師管理密語至少需 4 個字。");
+      await writeSetting_(key, value);
+      updatedKeys.push(key);
+    }
+  }
+  if (!updatedKeys.length) throw new Error("沒有可更新的設定欄位。");
+  return { ok: true, updatedKeys: updatedKeys };
 }
 
 /* 冪等結果快取：GAS 用 CacheService，Workers 改以 D1 資料表保存，跨隔離層有效。 */
@@ -2066,6 +2099,7 @@ async function settingsInfo_() {
   const settings = await loadSettings_();
   return {
     adminConfigured: Boolean(settings.AdminPassword),
+    geminiConfigured: Boolean(settings.GeminiAPIKey),
     maxImageBytes: Number(settings.MaxImageBytes) || 2097152,
     maxPdfBytes: Number(settings.MaxPdfBytes) || 20971520,
     driveRootFolderName: settings.DriveRootFolderName || "PDF互動講義檔案"
@@ -2129,6 +2163,7 @@ async function doPost(e) {
       }
       let result;
       if (action === "verifyAdmin") result = await verifyAdmin_(payload);
+      else if (action === "updateSettings") result = await updateSettings_(payload);
       else if (action === "logoutAdmin") result = await revokeAdminToken_(payload);
       else if (action === "listAnnouncements") result = await listAnnouncements_(payload);
       else if (action === "listPublicBoards") result = await listPublicBoards_();

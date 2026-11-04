@@ -100,7 +100,7 @@ const toBytes = (value) => Array.from(new TextEncoder().encode(value));
 const worker = runWorker();
 
 // 偵錯 shim：任何 doPost 失敗印出動作與錯誤訊息；負向測試（預期失敗）不在清單內則照常印出。
-const EXPECTED_FAILURES = new Set(['教師管理密語不正確。', '需要教師管理權限。']);
+const EXPECTED_FAILURES = new Set(['教師管理密語不正確。', '需要教師管理權限。', '尚未設定教師管理密語，請在教師入口首次登入時輸入，輸入成功即自動建立。', '教師管理密語至少需 4 個字。', '沒有可更新的設定欄位。']);
 const rawDoPost = worker.doPost.bind(worker);
 worker.doPost = async (event) => {
   const result = await rawDoPost(event);
@@ -149,6 +149,17 @@ worker.doPost = async (event) => {
   for (const action of frontendGet) assert.ok(backendActions.has(action), 'doGet 缺少前端動作 ' + action);
   for (const action of frontendPost) assert.ok(backendActions.has(action), 'doPost 缺少前端動作 ' + action);
   console.log('PASS contract: frontend GET/POST actions all routed (' + frontendGet.length + ' GET, ' + frontendPost.length + ' POST)');
+
+  // 首次設定：未設定密碼時，首次登入輸入的密語即自動建立（Workers 版無試算表可填）
+  assert.equal((await worker.doPost({ parameter: { action: 'verifyAdmin' }, postData: { contents: JSON.stringify({ action: 'verifyAdmin', password: '' }) } })).ok, false);
+  const bootstrap = await worker.doPost({ parameter: { action: 'verifyAdmin' }, postData: { contents: JSON.stringify({ action: 'verifyAdmin', password: 'first-secret', clientId: 'C-smoke' }) } });
+  assert.equal(bootstrap.ok, true);
+  assert.equal(bootstrap.firstTimeSetup, true);
+  assert.ok(bootstrap.token);
+  assert.equal(db.prepare("SELECT value FROM settings WHERE key = 'AdminPassword'").get().value, 'first-secret');
+  assert.equal((await worker.doPost({ parameter: { action: 'verifyAdmin' }, postData: { contents: JSON.stringify({ action: 'verifyAdmin', password: 'first-secret' }) } })).ok, true);
+  assert.equal((await worker.doPost({ parameter: { action: 'verifyAdmin' }, postData: { contents: JSON.stringify({ action: 'verifyAdmin', password: 'secret' }) } })).ok, false);
+  console.log('PASS admin bootstrap: first login creates password, wrong password rejected');
 
   // 工作表管理與公告
   db.prepare("UPDATE settings SET value = 'secret' WHERE key = 'AdminPassword'").run();
@@ -325,6 +336,16 @@ worker.doPost = async (event) => {
   assert.equal(stateAfter.state.page, 2);
   await worker.doPost({ parameter: { action: 'deleteBoard' }, postData: { contents: JSON.stringify({ action: 'deleteBoard', adminToken: token, boardId: board3 }) } });
   console.log('PASS materials: create, delete keeps one, classroom state save and read');
+
+  // 設定寫入：updateSettings 需管理權限，僅允許白名單鍵值
+  assert.equal((await worker.doPost({ parameter: { action: 'updateSettings' }, postData: { contents: JSON.stringify({ action: 'updateSettings', settings: { GeminiAPIKey: 'k' } }) } })).ok, false);
+  const updatedSettings = await worker.doPost({ parameter: { action: 'updateSettings' }, postData: { contents: JSON.stringify({ action: 'updateSettings', adminToken: token, settings: { GeminiAPIKey: 'test-key-123' } }) } });
+  assert.equal(updatedSettings.ok, true);
+  assert.equal(JSON.stringify(updatedSettings.updatedKeys), JSON.stringify(['GeminiAPIKey']));
+  assert.equal(db.prepare("SELECT value FROM settings WHERE key = 'GeminiAPIKey'").get().value, 'test-key-123');
+  assert.equal((await worker.doPost({ parameter: { action: 'updateSettings' }, postData: { contents: JSON.stringify({ action: 'updateSettings', adminToken: token, settings: { AdminPassword: '' } }) } })).ok, false, 'empty password must be rejected');
+  assert.equal((await worker.doGet({ parameter: { action: 'settings' } })).settings.geminiConfigured, true);
+  console.log('PASS settings write: gated updateSettings persists whitelisted keys');
 
   // 權杖跨隔離層存續（清掃快取後仍有效；撤銷後失效）
   const fresh = runWorker();
