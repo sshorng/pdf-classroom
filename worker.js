@@ -1729,7 +1729,6 @@ async function duplicateBoard_(payload) {
     createdAt: now,
     updatedAt: now
   };
-  await appendRow_("boards", newBoard);
   const materials = await materialsForBoard_(board.id, board);
   const materialIdMap = {};
   for (let index = 0; index < materials.length; index += 1) {
@@ -1753,7 +1752,7 @@ async function duplicateBoard_(payload) {
   const areas = await rowsForBoard_("areas", board.id);
   for (const area of areas) {
     await appendRow_("areas", {
-      id: area.id,
+      id: makeId_("Q"),
       boardId: newBoard.id,
       materialId: mapMaterialId(area.materialId),
       page: area.page,
@@ -1772,7 +1771,7 @@ async function duplicateBoard_(payload) {
   const masks = await rowsForBoard_("answerMasks", board.id);
   for (const mask of masks) {
     await appendRow_("answerMasks", {
-      id: mask.id,
+      id: makeId_("AM"),
       boardId: newBoard.id,
       materialId: mapMaterialId(mask.materialId),
       page: mask.page,
@@ -1787,6 +1786,7 @@ async function duplicateBoard_(payload) {
       updatedAt: now
     });
   }
+  await appendRow_("boards", newBoard);
   clearSubmissionCountCache_(newBoard.id);
   return boardCatalogResult_(newBoard);
 }

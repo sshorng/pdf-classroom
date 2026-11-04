@@ -2822,10 +2822,10 @@
         copy.pdfFileName = board.pdfFileName || "";
         copy.pdfMime = board.pdfMime || "";
         copy.areas = (board.areas || []).map(function (area) {
-          return Object.assign({}, area, { boardId: copy.id, materialId: materialIdMap[String(area.materialId)] || legacyMaterialId(copy.id) });
+          return Object.assign({}, area, { id: createId("Q"), boardId: copy.id, materialId: materialIdMap[String(area.materialId)] || legacyMaterialId(copy.id) });
         });
         copy.answerMasks = (board.answerMasks || []).map(function (mask) {
-          return Object.assign({}, mask, { boardId: copy.id, materialId: materialIdMap[String(mask.materialId)] || legacyMaterialId(copy.id) });
+          return Object.assign({}, mask, { id: createId("AM"), boardId: copy.id, materialId: materialIdMap[String(mask.materialId)] || legacyMaterialId(copy.id) });
         });
         await localPut("boards", copy);
         return { ok: true, board: copy, materials: copy.materials, areas: copy.areas, answerMasks: copy.answerMasks };

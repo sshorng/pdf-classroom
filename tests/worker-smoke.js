@@ -13,14 +13,19 @@ const fullSource = rawSource.replace(/export default/, 'const WORKER_EXPORT =');
 const db = new (require('node:sqlite').DatabaseSync)(':memory:');
 db.exec(fs.readFileSync(path.join(baseDir, 'schema.sql'), 'utf8'));
 
-/* D1 介面模擬：prepare→all／run，bind→run／all，batch 依序執行。傳回結果形狀與 D1 相同。 */
+/* D1 介面模擬：prepare→all／run，bind→run／all，batch 依序執行。傳回結果形狀與 D1 相同。
+   node:sqlite 不支援 D1 的編號佔位符（?1/?2/?3），因此在此改寫為匿名 ?，
+   並依編號重排 bind 值：bindings[i] 對應編號 i＋1，重排後按改寫 SQL 的出現順序綁定。 */
 function makeD1(sqlite) {
   return {
     prepare(sql) {
-      const stmt = sqlite.prepare(sql);
+      const order = [];
+      const rewritten = String(sql).replace(/\?(\d+)/g, (_, num) => { order.push(Number(num)); return "?"; });
+      const stmt = sqlite.prepare(rewritten);
+      const remap = (bindings) => (order.length ? order.map((num) => bindings[num - 1]) : bindings);
       const wrap = (bindings) => ({
-        all: async () => ({ results: bindings.length ? stmt.all(...bindings) : stmt.all() }),
-        run: async () => { bindings.length ? stmt.run(...bindings) : stmt.run(); return {}; }
+        all: async () => ({ results: bindings.length ? stmt.all(...remap(bindings)) : stmt.all() }),
+        run: async () => { const mapped = remap(bindings); mapped.length ? stmt.run(...mapped) : stmt.run(); return {}; }
       });
       return {
         all: async () => ({ results: stmt.all() }),
@@ -346,6 +351,39 @@ worker.doPost = async (event) => {
   assert.equal((await worker.doPost({ parameter: { action: 'updateSettings' }, postData: { contents: JSON.stringify({ action: 'updateSettings', adminToken: token, settings: { AdminPassword: '' } }) } })).ok, false, 'empty password must be rejected');
   assert.equal((await worker.doGet({ parameter: { action: 'settings' } })).settings.geminiConfigured, true);
   console.log('PASS settings write: gated updateSettings persists whitelisted keys');
+
+  // 複製版面：副本名稱、共用 PDF 物件（R2 不新增）、圖釘與遮罩複製、無待批改
+  const dupSource = await worker.doPost({ parameter: { action: 'createBoard' }, postData: { contents: JSON.stringify({
+    action: 'createBoard', adminToken: token, name: '吸血蛾講義',
+    pdf: { name: '講義.pdf', mime: 'application/pdf', data: 'data:application/pdf;base64,' + Buffer.from(new Uint8Array(pdfBytes)).toString('base64') },
+    areas: [{ materialId: '', page: 1, x: 0.1, y: 0.1, width: 0.2, height: 0.1, title: '第一題', prompt: '請作答' }],
+    answerMasks: [{ materialId: '', page: 1, x: 0.1, y: 0.3, width: 0.2, height: 0.1, title: '答案遮罩' }]
+  }) } });
+  assert.equal(dupSource.ok, true);
+  const dupBoardId = dupSource.board.id;
+  const dupFileId = dupSource.materials[0].pdfFileId;
+  const filesBeforeDuplicate = files.map.size;
+  const duplicate = await worker.doPost({ parameter: { action: 'duplicateBoard' }, postData: { contents: JSON.stringify({ action: 'duplicateBoard', adminToken: token, boardId: dupBoardId }) } });
+  assert.equal(duplicate.ok, true);
+  const copyId = duplicate.board.id;
+  assert.notEqual(copyId, dupBoardId, 'Duplicate must get a new board id');
+  assert.equal(duplicate.board.name, '吸血蛾講義（副本）');
+  assert.equal(duplicate.materials.length, 1);
+  assert.notEqual(duplicate.materials[0].id, dupSource.materials[0].id, 'Copy material must get a new id');
+  assert.equal(duplicate.materials[0].pdfFileId, dupFileId, 'Copy must reuse the uploaded PDF object');
+  assert.equal(duplicate.areas.length, 1);
+  assert.equal(duplicate.areas[0].title, '第一題');
+  assert.notEqual(duplicate.areas[0].id, dupSource.areas[0].id, 'Copied area must get a new global id');
+  assert.equal(duplicate.areas[0].materialId, duplicate.materials[0].id, 'Copied area must point to the copy material');
+  assert.equal(duplicate.answerMasks.length, 1);
+  assert.notEqual(duplicate.answerMasks[0].id, dupSource.answerMasks[0].id, 'Copied mask must get a new global id');
+  assert.equal(files.map.size, filesBeforeDuplicate, 'Duplicate must not upload a second PDF object');
+  const copyList = await worker.doPost({ parameter: { action: 'listBoards' }, postData: { contents: JSON.stringify({ action: 'listBoards', adminToken: token }) } });
+  const copySummary = copyList.data.find((item) => String(item.id) === String(copyId));
+  assert.equal(copySummary.pendingCount, 0, 'Fresh duplicate must have no pending submissions');
+  await worker.doPost({ parameter: { action: 'deleteBoard' }, postData: { contents: JSON.stringify({ action: 'deleteBoard', adminToken: token, boardId: copyId }) } });
+  await worker.doPost({ parameter: { action: 'deleteBoard' }, postData: { contents: JSON.stringify({ action: 'deleteBoard', adminToken: token, boardId: dupBoardId }) } });
+  console.log('PASS duplicate board: name, shared PDF object, areas, masks, pending count');
 
   // 權杖跨隔離層存續（清掃快取後仍有效；撤銷後失效）
   const fresh = runWorker();
