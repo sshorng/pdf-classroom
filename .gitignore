@@ -3,4 +3,5 @@ node_modules/
 *.log
 *.gsheet
 migration/output/
+.wrangler/
 PDF互動講義檔案/
