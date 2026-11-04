@@ -21,12 +21,13 @@ const assert = require('node:assert/strict');
   });
   try {
     await call('Network.enable');
+    await call('Network.setCacheDisabled', { cacheDisabled: true });
     await call('Network.setBlockedURLs', { urls: ['*://script.google.com/*', '*://script.googleusercontent.com/*'] });
     await call('Page.enable');
     await call('Page.navigate', { url: 'http://127.0.0.1:4173/index.html' });
     await new Promise(resolve => setTimeout(resolve, 1500));
     const evaluated = await call('Runtime.evaluate', { awaitPromise: true, returnByValue: true, expression: `(async () => {
-      const original = { loadAnnouncements, publicApi, ensurePdfJs, getFileWithCache, localRequest, gasGet, demo: state.demo };
+      const original = { loadAnnouncements, publicApi, ensurePdfJs, getFileWithCache, localRequest, gasGet, selectMaterial, demo: state.demo };
       let releaseAnnouncements;
       let boardsRequested = false;
       let releaseEngine;
@@ -73,17 +74,40 @@ const assert = require('node:assert/strict');
         calls.length = 0; legacy = true;
         await loadClassroomSync({ pulse: true });
         const legacySyncStillWorks = calls.join(',') === 'classroomPulse,classroomSync';
-        return { announcementDoesNotBlock, downloadDoesNotWaitForEngine, studentPositionPreserved, studentCannotRevealAnswer, combinedSyncUsesOneRequest, legacySyncStillWorks };
+        document.getElementById('appMain').innerHTML = '<div class="pdf-scroll" style="height:200px;overflow:auto"><div class="page-stage" id="pageStage" style="height:1200px"><canvas id="pdfCanvas"></canvas><div id="answerMaskLayer" class="answer-mask-layer"></div><div id="zoneLayer"></div></div></div>';
+        const scroll = document.querySelector('.pdf-scroll');
+        scroll.scrollTop = 173;
+        renderRevealMasks();
+        const maskBefore = document.querySelector('.answer-mask.is-covered');
+        let optedIn = false;
+        gasGet = async (action, payload) => {
+          optedIn = payload.catalogDelta === '1';
+          return { ok: true, state: { materialId: 'network-test', page: 9, zoom: 2 }, pulseVersion: 'p', stateVersion: 's', catalogVersion: 'c', inkVersion: 'i', inkChanged: false, catalogChanged: false, materials: null, areas: null, answerMasks: null };
+        };
+        await loadClassroomSync({ pulse: true });
+        const unchangedCatalogKeepsMask = !!maskBefore && document.querySelector('.answer-mask.is-covered') === maskBefore && state.answerMasks.length === 1;
+        if (maskBefore) maskBefore.click();
+        revealAnswerMask('network-mask');
+        const maskStillNotRevealable = !state.revealedAnswerMaskIds.has('network-mask') && !!document.querySelector('.answer-mask.is-covered');
+        let selection = null;
+        state.materials.push({ id: 'network-second', pdfFileId: 'second' });
+        selectMaterial = async (id, options) => { selection = { id, options }; };
+        gasGet = async () => ({ ok: true, state: { materialId: 'network-second', page: 9, zoom: 2 }, inkChanged: false, catalogChanged: false, materials: null, areas: null, answerMasks: null });
+        await loadClassroomSync();
+        const studentFollowsMaterialOnly = selection && selection.id === 'network-second' && selection.options.remote === true && selection.options.page === undefined && selection.options.zoom === undefined && state.currentPage === 1 && state.zoom === 1.25 && scroll.scrollTop === 173;
+        return { announcementDoesNotBlock, downloadDoesNotWaitForEngine, studentPositionPreserved, studentCannotRevealAnswer, combinedSyncUsesOneRequest, legacySyncStillWorks, optedIn, unchangedCatalogKeepsMask, maskStillNotRevealable, studentFollowsMaterialOnly };
       } finally {
         loadAnnouncements = original.loadAnnouncements; publicApi = original.publicApi;
         ensurePdfJs = original.ensurePdfJs; getFileWithCache = original.getFileWithCache;
         localRequest = original.localRequest;
         gasGet = original.gasGet;
+        selectMaterial = original.selectMaterial;
         clearMaterialPdfCache(); state.pdf = null; state.demo = original.demo;
       }
     })()` });
     if (evaluated.exceptionDetails) throw new Error(JSON.stringify(evaluated.exceptionDetails));
     const result = evaluated.result.value;
+    for (const [name, value] of Object.entries(result)) assert.equal(value, true, name);
     assert.equal(result.announcementDoesNotBlock, true);
     assert.equal(result.downloadDoesNotWaitForEngine, true);
     assert.equal(result.studentPositionPreserved, true);

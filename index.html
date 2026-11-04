@@ -640,8 +640,8 @@
       <h2>連線設定</h2>
       <p class="modal-message">填入 GAS Web App 網址後，教材版面與作答資料就能在不同裝置間同步。</p>
       <div class="field">
-        <label for="gasUrlInput">GAS Web App 網址</label>
-        <input id="gasUrlInput" type="password" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
+        <label for="gasUrlInput">API 端點網址（GAS Web App 或 Workers）</label>
+        <input id="gasUrlInput" type="password" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec 或 https://你的名稱.workers.dev">
       </div>
       <div class="modal-actions">
         <button class="button subtle" id="useDemoButton" type="button">只用本機示範</button>
@@ -699,10 +699,12 @@
     // 第 0 區｜CONFIG：常數與資源位址
     // ============================================================================
     // ============================================================
-    // GAS URL 優先序：網址參數 > LocalStorage > 原始碼預設值
-    // 分享網址或設定視窗可覆寫舊版部署網址，避免舊端點造成假性斷線。
+    // API 端點雙軌優先序：網址參數 ?config= > LocalStorage（pdfw_gas_url）> 原始碼預設值
+    // 原始碼預設值支援雙軌：DEFAULT_WORKER_URL 為 Workers 端點（部署後填入即生效）、
+    // DEFAULT_GAS_URL 為 GAS 端點（現役預設，遷移期退路）。分享網址與設定視窗可覆寫舊端點。
     // ============================================================
     const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbz4n8969la0hbjNCno3HM5dR0mvMbL8rvbom08wrquC8Ah8QhGjoMUAdcxF9uJl_5Kt7w/exec";
+    const DEFAULT_WORKER_URL = "";
     const APP_KEY = "pdfw_";
     const DB_NAME = "pdfw_local_v1";
     const MAX_IMAGE_COUNT = 2;
@@ -736,7 +738,9 @@
     const PDFIUM_MODULE_URL = "https://unpkg.com/@hyzyla/pdfium@2.1.13/browser/cdn";
     const PDF_MAX_CANVAS_PIXELS = 12000000;
     const PDF_MAX_CANVAS_DIMENSION = 4096;
-    const GAS_URL = resolveGasUrl();
+    const GAS_URL = resolveApiUrl();
+    // 端點型態判定：GAS 域名為 gas，其餘 https 端點視為 Worker（getFile 走串流）。
+    const NETWORK_URL_MODE = /(^|[./])script\.google(usercontent)?\.com/i.test(String(GAS_URL).replace(/^https?:\/\//i, "")) ? "gas" : "worker";
 
     // ============================================================================
     // 第 1 區｜STATE：唯一集中式狀態
@@ -1063,7 +1067,7 @@
     function photoThumbHtml(source, alt, deleteAttribute, deleteValue) {
       return "<div class=\"photo-thumb\"><img src=\"" + source + "\" alt=\"" + escapeHtml(alt) + "\"><button class=\"photo-delete-btn\" data-" + deleteAttribute + "=\"" + escapeHtml(String(deleteValue)) + "\" type=\"button\" title=\"刪除這張照片\" aria-label=\"刪除照片\">×</button></div>";
     }
-    function resolveGasUrl() {
+    function resolveApiUrl() {
       const params = new URLSearchParams(window.location.search);
       const config = params.get("config");
       if (config) {
@@ -1077,6 +1081,8 @@
       }
       const stored = String(localStorage.getItem(APP_KEY + "gas_url") || "").trim();
       if (/^https:\/\//i.test(stored)) return stored;
+      const workerDefault = String(DEFAULT_WORKER_URL || "").trim();
+      if (/^https:\/\//i.test(workerDefault)) return workerDefault;
       return String(DEFAULT_GAS_URL || "").trim();
     }
 
@@ -1568,7 +1574,7 @@
       document.getElementById("saveSettingsButton").addEventListener("click", function () {
         const value = document.getElementById("gasUrlInput").value.trim();
         if (!/^https:\/\//i.test(value)) {
-          showModal("網址格式不正確", "請貼上以 https 開頭的 GAS Web App 網址。", "error");
+          showModal("網址格式不正確", "請貼上以 https 開頭的 API 端點網址。", "error");
           return;
         }
         localStorage.setItem(APP_KEY + "gas_url", value);
@@ -1578,7 +1584,7 @@
         window.setTimeout(function () { window.location.reload(); }, 500);
       });
       document.getElementById("clearSettingsButton").addEventListener("click", async function () {
-        const ok = await showModal("清除連線設定", "將移除 GAS 網址與本機示範標記，確定要重置嗎？", "confirm");
+        const ok = await showModal("清除連線設定", "將移除 API 端點網址與本機示範標記，確定要重置嗎？", "confirm");
         if (!ok) return;
         localStorage.removeItem(APP_KEY + "gas_url");
         localStorage.removeItem(APP_KEY + "demo");
@@ -2283,6 +2289,16 @@
       return bytes;
     }
 
+    // bytes 轉 base64 採 32KB 分塊，避免大型 PDF 一次展開造成堆疊溢位。
+    function base64FromBytes(bytes) {
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let index = 0; index < bytes.length; index += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(index, index + chunkSize));
+      }
+      return btoa(binary);
+    }
+
     function base64ToDataUrl(value, mime) {
       return "data:" + (mime || "application/octet-stream") + ";base64," + value;
     }
@@ -2820,8 +2836,8 @@
       }
     }
 
-    async function gasPost(action, payload, options) {
-      if (!GAS_URL) throw new ApiError("尚未設定 GAS 網址。", true);
+    async function apiPost(action, payload, options) {
+      if (!GAS_URL) throw new ApiError("尚未設定 API 端點網址。", true);
       const settings = options || {};
       const form = new FormData();
       form.append("action", action);
@@ -2830,10 +2846,10 @@
         const requestOptions = { method: "POST", body: form };
         if (settings.signal) requestOptions.signal = settings.signal;
         const result = await fetchWithTimeout(GAS_URL, requestOptions, Number(settings.timeout) || GAS_POST_TIMEOUT, async function (response) {
-          if (!response.ok) throw new ApiError("GAS 服務暫時無法回應。", true);
+          if (!response.ok) throw new ApiError("API 服務暫時無法回應。", true);
           return response.json();
         });
-        if (!result.ok) throw new ApiError(result.error || "GAS 操作失敗。", false);
+        if (!result.ok) throw new ApiError(result.error || "API 操作失敗。", false);
         markNetworkSuccess(action);
         return result;
       } catch (error) {
@@ -2844,8 +2860,8 @@
       }
     }
 
-    async function gasGet(action, params, options) {
-      if (!GAS_URL) throw new ApiError("尚未設定 GAS 網址。", true);
+    async function apiGet(action, params, options) {
+      if (!GAS_URL) throw new ApiError("尚未設定 API 端點網址。", true);
       const settings = options || {};
       const maxAttempts = Math.max(1, Number(settings.maxAttempts) || GAS_GET_MAX_ATTEMPTS);
       const timeout = Number(settings.timeout) || GAS_REQUEST_TIMEOUT;
@@ -2862,10 +2878,10 @@
           const attemptUrl = new URL(url);
           attemptUrl.searchParams.set("_ts", String(Date.now()) + "-" + attempt);
           const result = await fetchWithTimeout(attemptUrl.toString(), requestOptions, timeout, async function (response) {
-            if (!response.ok) throw new ApiError("GAS 服務暫時無法回應。", true);
+            if (!response.ok) throw new ApiError("API 服務暫時無法回應。", true);
             return response.json();
           });
-          if (!result.ok) throw new ApiError(result.error || "GAS 操作失敗。", false);
+          if (!result.ok) throw new ApiError(result.error || "API 操作失敗。", false);
           markNetworkSuccess(action);
           return result;
         } catch (error) {
@@ -2876,6 +2892,52 @@
         }
       }
       markNetworkFailure(lastError, action);
+      throw new ApiError((lastError && lastError.message) || "網路連線失敗。", true);
+    }
+
+    // 相容別名：既有呼叫端與契約測試仍以 gasGet／gasPost 呼叫，本體已換骨為 apiGet／apiPost（階段 5 連同呼叫端一併清除）。
+    async function gasPost(action, payload, options) { return apiPost(action, payload, options); }
+    async function gasGet(action, params, options) { return apiGet(action, params, options); }
+
+    // Worker 端點檔案串流：改走 stream=1 的 HTTP 下載，Range 續傳與 ETag 由瀏覽器接手，
+    // 回傳契約仍與 getFile JSON 相同（base64），下游與本機快取邏輯零改動。
+    async function apiGetFileDirect(params, options) {
+      const settings = options || {};
+      const maxAttempts = Math.max(1, Number(settings.maxAttempts) || 2);
+      const retryDelay = Number(settings.retryDelay) || GAS_GET_RETRY_DELAY;
+      const url = new URL(GAS_URL);
+      url.searchParams.set("action", "getFile");
+      url.searchParams.set("fileId", params.fileId);
+      if (params.boardId) url.searchParams.set("boardId", params.boardId);
+      if (params.materialId) url.searchParams.set("materialId", params.materialId);
+      url.searchParams.set("stream", "1");
+      let lastError = null;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        try {
+          if (settings.signal && settings.signal.aborted) throw new ApiError("同步請求已取消。", true, true);
+          const requestOptions = { cache: "no-store" };
+          if (settings.signal) requestOptions.signal = settings.signal;
+          url.searchParams.set("_ts", String(Date.now()) + "-" + attempt);
+          const result = await fetchWithTimeout(url.toString(), requestOptions, Number(settings.timeout) || GAS_FILE_TIMEOUT, async function (response) {
+            if (!response.ok) throw new ApiError("API 服務暫時無法回應。", true);
+            const bytes = new Uint8Array(await response.arrayBuffer());
+            const mime = response.headers.get("content-type") || "application/octet-stream";
+            const disposition = String(response.headers.get("content-disposition") || "");
+            const nameMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+            let fileName = "";
+            if (nameMatch) { try { fileName = decodeURIComponent(nameMatch[1]); } catch (error) { fileName = ""; } }
+            return { ok: true, fileId: params.fileId, name: fileName || "檔案", mime: mime, size: bytes.length, base64: base64FromBytes(bytes) };
+          });
+          markNetworkSuccess("getFile");
+          return result;
+        } catch (error) {
+          if (error instanceof ApiError && !error.network) throw error;
+          if (error && error.aborted) throw error;
+          lastError = error;
+          if (attempt + 1 < maxAttempts) await delay(retryDelay * Math.pow(2, attempt), settings.signal);
+        }
+      }
+      markNetworkFailure(lastError, "getFile");
       throw new ApiError((lastError && lastError.message) || "網路連線失敗。", true);
     }
 
@@ -3057,7 +3119,10 @@
         const cached = cachedMatchesMaterial ? cachedFileResult(cachedFile) : null;
         if (cached) return cached;
         const params = { fileId: fileId, boardId: boardId, materialId: materialId || "" };
-        const result = state.demo ? await localRequest("getFile", params) : await gasGet("getFile", params, { timeout: GAS_FILE_TIMEOUT, maxAttempts: 2 });
+        let result;
+        if (state.demo) result = await localRequest("getFile", params);
+        else if (NETWORK_URL_MODE === "worker") result = await apiGetFileDirect(params, { timeout: GAS_FILE_TIMEOUT });
+        else result = await gasGet("getFile", params, { timeout: GAS_FILE_TIMEOUT, maxAttempts: 2 });
         try {
           await localPut("files", { id: result.fileId || fileId, name: result.name || "檔案", mime: result.mime || "application/octet-stream", base64: result.base64 || "", size: result.size || 0, boardId: boardId || "", materialId: materialId || "", cachedAt: new Date().toISOString() });
         } catch (error) {
@@ -3082,6 +3147,34 @@
       state.imageCache.set(fileId, dataUrl);
       while (state.imageCache.size > MAX_IMAGE_CACHE_ENTRIES) state.imageCache.delete(state.imageCache.keys().next().value);
       return dataUrl;
+    }
+
+    // 暖機：Worker 端點下，版面就緒後背景預取各教材 PDF 進本機快取（並發 2），學生開頁優先命中 IndexedDB。
+    // 僅 Worker 端點啟用：串流下載便宜且不吃 GAS 額度；GAS 端點維持現行按需下載。
+    const WARMUP_FILE_CONCURRENCY = 2;
+    function warmupMaterialPdfs(board, materials) {
+      if (state.demo || NETWORK_URL_MODE !== "worker" || !board || !Array.isArray(materials)) return;
+      const targets = materials.filter(function (item) { return item && item.pdfFileId && String(item.status || "啟用") === "啟用"; });
+      let index = 0;
+      let active = 0;
+      const pump = function () {
+        while (active < WARMUP_FILE_CONCURRENCY && index < targets.length) {
+          const material = targets[index];
+          index += 1;
+          active += 1;
+          (async function () {
+            try {
+              await getFileWithCache(material.pdfFileId, board.id, material.id);
+            } catch (error) {
+              // 暖機失敗不影響主流程，學生開頁時仍會即時下載。
+            } finally {
+              active -= 1;
+              pump();
+            }
+          })();
+        }
+      };
+      pump();
     }
 
     async function loadMaterialPdf(materialId) {
@@ -3212,6 +3305,7 @@
       state.lastClassroomCountsPollAt = 0;
       state.currentPage = 1;
       state.zoom = 1;
+      warmupMaterialPdfs(state.board, state.materials);
       if (state.activeMaterialId) {
         await loadMaterialPdf(state.activeMaterialId);
         if (state.view === "student") {
