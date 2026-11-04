@@ -1324,9 +1324,21 @@ function deleteAnnouncement_(payload) {
 
 function listBoards_(payload) {
   requireManager_(payload || {});
+  const pendingCounts = {};
+  readTable_("submissions").forEach(function (item) {
+    if (!isActiveRow_(item)) return;
+    if (String(item.status || "") === "已批改") return;
+    const key = String(item.boardId || "");
+    if (key) pendingCounts[key] = (pendingCounts[key] || 0) + 1;
+  });
+  const data = readTable_("boards").filter(isActiveRow_).map(function (board) {
+    const item = publicBoard_(board);
+    item.pendingCount = pendingCounts[String(board.id)] || 0;
+    return item;
+  }).sort(compareBoardsByUpdatedAt_);
   return {
     ok: true,
-    data: readTable_("boards").filter(isActiveRow_).map(publicBoard_).sort(compareBoardsByUpdatedAt_),
+    data: data,
     serverTime: now_()
   };
 }
@@ -1709,6 +1721,83 @@ function createBoard_(payload) {
   saveAreas_(board.id, payload.areas || []);
   saveAnswerMasks_(board.id, payload.answerMasks || []);
   return boardCatalogResult_(board);
+}
+
+async function duplicateBoard_(payload) {
+  await requireManager_(payload);
+  const board = await getBoard_(payload.boardId, false);
+  const now = now_();
+  const newBoard = {
+    id: makeId_("B"),
+    name: cleanText_(board.name + "（副本）", MAX_TEXT.name),
+    description: board.description || "",
+    pdfFileId: board.pdfFileId || "",
+    pdfFileName: board.pdfFileName || "",
+    pdfMime: board.pdfMime || "",
+    status: "啟用",
+    createdAt: now,
+    updatedAt: now
+  };
+  appendRow_("boards", newBoard);
+  const materials = await materialsForBoard_(board.id, board);
+  const materialIdMap = {};
+  for (let index = 0; index < materials.length; index += 1) {
+    const material = materials[index];
+    const newId = makeId_("M");
+    materialIdMap[String(material.id)] = newId;
+    appendRow_("materials", { id: newId, boardId: newBoard.id, name: material.name || "教材 " + (index + 1), description: material.description || "", pdfFileId: material.pdfFileId || "", pdfFileName: material.pdfFileName || "", pdfMime: material.pdfMime || "application/pdf", order: material.order || index + 1, status: "啟用", createdAt: now, updatedAt: now });
+  }
+  if (!materials.length && (board.pdfFileId || newBoard.pdfFileId)) {
+    const legacyId = legacyMaterialId_(newBoard.id);
+    materialIdMap[legacyMaterialId_(board.id)] = legacyId;
+    appendRow_("materials", { id: legacyId, boardId: newBoard.id, name: board.pdfFileName || "主要教材", description: "既有單一 PDF 教材", pdfFileId: newBoard.pdfFileId, pdfFileName: newBoard.pdfFileName, pdfMime: newBoard.pdfMime || "application/pdf", order: 1, status: "啟用", createdAt: now, updatedAt: now });
+  }
+  const fallbackMaterialId = materials.length ? String(materials[0].id) : legacyMaterialId_(newBoard.id);
+  const mapMaterialId = function (value) {
+    const key = String(value || "");
+    if (materialIdMap[key]) return materialIdMap[key];
+    if (key.indexOf(legacyMaterialId_(board.id)) === 0) return legacyMaterialId_(newBoard.id);
+    return materialIdMap[fallbackMaterialId] || legacyMaterialId_(newBoard.id);
+  };
+  const areas = await rowsForBoard_("areas", board.id);
+  for (const area of areas) {
+    appendRow_("areas", {
+      id: area.id,
+      boardId: newBoard.id,
+      materialId: mapMaterialId(area.materialId),
+      page: area.page,
+      x: area.x,
+      y: area.y,
+      width: area.width,
+      height: area.height,
+      title: area.title,
+      prompt: area.prompt,
+      order: area.order,
+      status: "啟用",
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  const masks = await rowsForBoard_("answerMasks", board.id);
+  for (const mask of masks) {
+    appendRow_("answerMasks", {
+      id: mask.id,
+      boardId: newBoard.id,
+      materialId: mapMaterialId(mask.materialId),
+      page: mask.page,
+      x: mask.x,
+      y: mask.y,
+      width: mask.width,
+      height: mask.height,
+      title: mask.title,
+      order: mask.order,
+      status: "啟用",
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  clearSubmissionCountCache_(newBoard.id);
+  return boardCatalogResult_(newBoard);
 }
 
 function saveAreas_(boardId, areas) {
@@ -2190,6 +2279,7 @@ function doPost(e) {
       else if (action === "listBoards") result = listBoards_(payload);
       else if (action === "getBoard") result = getBoardData_(payload);
       else if (action === "createBoard") result = createBoard_(payload);
+      else if (action === "duplicateBoard") result = duplicateBoard_(payload);
       else if (action === "updateBoard") result = updateBoard_(payload);
       else if (action === "archiveBoard") result = archiveBoard_(payload);
       else if (action === "deleteBoard") result = deleteBoard_(payload);

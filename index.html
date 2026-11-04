@@ -270,7 +270,9 @@
     .toolbar-button:hover { background: #fff; border-color: #aac6ba; }
     .toolbar-button.active { color: #fffaf4; background: var(--accent); border-color: var(--accent); }
     .material-control-group { min-width: 0; }
-    .material-select-label { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 68px; height: 40px; padding: 7px 25px 7px 11px; color: var(--teal-dark); background: rgba(255,255,255,.62); border: 1px solid #d5d5cb; border-radius: 10px; font-size: 12px; font-weight: 800; line-height: 1; white-space: nowrap; }
+    .material-select-label { position: relative; display: inline-flex; align-items: center; justify-content: flex-start; gap: 6px; min-width: 112px; max-width: min(300px, 46vw); height: 40px; padding: 7px 25px 7px 11px; color: var(--teal-dark); background: rgba(255,255,255,.62); border: 1px solid #d5d5cb; border-radius: 10px; font-size: 12px; font-weight: 800; line-height: 1; white-space: nowrap; }
+    .material-select-icon { flex: 0 0 auto; font-size: 13px; opacity: .82; }
+    .material-select-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .material-select-label::after { content: "⌄"; position: absolute; top: 50%; right: 8px; pointer-events: none; transform: translateY(-56%); }
     .material-select-label:focus-within { border-color: #85aa9c; box-shadow: 0 0 0 3px rgba(133,170,156,.16); }
     .material-select { position: absolute; inset: 0; width: 100%; min-width: 0; height: 100%; padding: 0; opacity: 0; cursor: pointer; }
@@ -296,6 +298,8 @@
      .zone.active { background: var(--accent-dark); border-color: #fff; box-shadow: 0 0 0 5px rgba(215,109,80,.22), 0 8px 20px rgba(49,95,89,.3); animation: zonePulse 1.4s ease-out infinite; }
      .zone-response-count { position: absolute; top: -13px; left: 22px; min-width: 22px; height: 18px; padding: 0 5px; color: var(--teal-dark); background: #fffdf8; border: 1px solid #d7e4dc; border-radius: 999px; box-shadow: 0 3px 9px rgba(49,95,89,.2); font-size: 10px; font-weight: 800; line-height: 16px; transform: rotate(45deg); }
     .zone-status { display: none; }
+    .zone.is-answered { background: #3f7d63; border-color: #eaf6ee; }
+    .zone.is-answered .zone-status { display: grid; position: absolute; top: -7px; left: -7px; place-items: center; width: 17px; height: 17px; color: #2f7157; background: #fffdf8; border: 1px solid #cfe4d8; border-radius: 50%; box-shadow: 0 2px 6px rgba(38,45,41,.18); font-size: 10px; font-weight: 900; line-height: 1; transform: rotate(45deg); }
     body.editor-mode .zone { cursor: grab; touch-action: none; }
     body.editor-mode .zone:active { cursor: grabbing; }
     .ink-layer { position: absolute; inset: 0; z-index: 3; display: none; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
@@ -338,7 +342,11 @@
     .field textarea, .modal-card textarea { min-height: 88px; resize: vertical; }
     .helper { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
     .area-list { display: grid; gap: 8px; }
-    .area-item { display: flex; align-items: center; gap: 8px; padding: 10px; background: #f7f5ef; border: 1px solid transparent; border-radius: 11px; cursor: pointer; }
+    .area-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 10px; background: #f7f5ef; border: 1px solid transparent; border-radius: 11px; cursor: pointer; }
+    .area-item.is-answered { background: #eef6f0; border-color: #cfe4d8; }
+    .area-item-state { flex: 0 0 auto; color: #4f7d62; font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .area-item-state.is-empty { color: var(--muted); font-weight: 700; }
+    .area-title-input { width: 100%; min-width: 0; padding: 3px 6px; color: var(--ink); background: #fff; border: 1px solid #85aa9c; border-radius: 6px; outline: none; font: inherit; font-size: 13px; font-weight: 700; }
     .area-item:hover, .area-item.selected { background: var(--teal-soft); border-color: #bfd7ce; }
     .area-number { display: grid; flex: 0 0 auto; place-items: center; width: 24px; height: 24px; color: #fff; background: var(--teal); border-radius: 8px; font-size: 11px; font-weight: 800; }
     .area-item-copy { min-width: 0; flex: 1; }
@@ -477,9 +485,21 @@
     body.editor-mode .workspace-sidebar { height: 100%; max-height: none; overflow-x: hidden; overflow-y: auto; }
     body.classroom-mode .classroom-layout { height: 100vh; max-height: 100vh; min-height: 0; grid-template-columns: 1fr; border-radius: 0; border: none; }
     body.classroom-mode .classroom-pdf-panel { min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-    body.classroom-mode .classroom-pdf-panel .pdf-toolbar { position: absolute; top: 0; right: 0; left: 0; z-index: 10; max-height: 116px; overflow-x: auto; overflow-y: hidden; padding: 6px 10px; background: rgba(239, 237, 230, .94); backdrop-filter: blur(14px); justify-content: flex-start; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; }
+    body.classroom-mode .classroom-pdf-panel .pdf-toolbar { position: absolute; top: 0; right: 0; left: 0; z-index: 10; max-height: 116px; overflow: visible; padding: 6px 10px; background: rgba(239, 237, 230, .94); backdrop-filter: blur(14px); justify-content: flex-start; align-items: center; gap: 8px; flex-wrap: wrap; white-space: nowrap; }
     body.classroom-mode .classroom-pdf-panel .pdf-scroll { flex: 1; height: 100%; min-height: 0; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y pinch-zoom; padding: 78px 28px 76px; }
-    body.classroom-mode .classroom-sidebar { display: none; }
+    body.classroom-mode .classroom-sidebar { display: flex; position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(340px, 88vw); max-height: none; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 13px 15px 17px; background: #fffdf8; border-left: 1px solid var(--line); box-shadow: -16px 0 44px rgba(23,35,30,.24); transform: translateX(105%); transition: transform .26s cubic-bezier(.2,.8,.3,1); }
+    body.classroom-mode.areas-drawer-open .classroom-sidebar { transform: none; }
+    .area-drawer-backdrop { position: fixed; inset: 0; z-index: 55; display: none; background: rgba(31,43,38,.34); }
+    body.areas-drawer-open .area-drawer-backdrop { display: block; }
+    .classroom-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .classroom-drawer-head .sidebar-title { margin-bottom: 0; }
+    .classroom-drawer-close { display: grid; place-items: center; width: 34px; height: 34px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 10px; font-size: 15px; }
+    .classroom-drawer-close:hover { color: var(--danger); border-color: #e2bbb4; }
+    .toolbar-popover { position: absolute; top: calc(100% + 4px); right: 6px; z-index: 40; display: none; flex-wrap: wrap; align-items: center; gap: 8px; width: max-content; max-width: min(92vw, 640px); padding: 10px 12px; background: #fffdf8; border: 1px solid rgba(213,213,203,.95); border-radius: 14px; box-shadow: 0 16px 44px rgba(23,35,30,.22); }
+    .toolbar-popover.open { display: flex; }
+    .toolbar-popover .toolbar-group { flex-wrap: wrap; }
+    .toolbar-popover .material-select-label { max-width: 240px; }
+    .toolbar-more-button { font-weight: 800; }
     body.classroom-mode .ink-controls { gap: 4px; }
     body.classroom-mode .ink-controls select { min-height: 36px; }
     body.classroom-mode .ink-controls input[type="range"] { width: 72px; }
@@ -499,6 +519,24 @@
     body.student-mode .student-workspace .pdf-main { position: relative; }
     body.student-mode .student-workspace .pdf-scroll { flex: 1; min-height: 0; height: auto; overflow: auto; padding-bottom: 76px; }
     body.student-mode .student-workspace .workspace-sidebar { height: 100%; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: auto; }
+    body.student-mode .student-shell > .offline-note { position: absolute; top: 64px; left: 50%; z-index: 25; width: auto; max-width: calc(100vw - 24px); margin: 0; transform: translateX(-50%); box-shadow: 0 8px 22px rgba(38,45,41,.14); }
+    .student-drawer-handle { display: none; }
+    .student-identity-row { display: flex; align-items: center; gap: 7px; }
+    .student-identity-row input { min-width: 0; flex: 1; }
+    .student-switch-button { flex: 0 0 auto; min-height: 40px; padding: 0 10px; color: #f7fff9; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.38); border-radius: 9px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+    .student-switch-button:hover { background: rgba(255,255,255,.26); }
+    .draft-status { min-height: 17px; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .draft-status.is-saved { color: #4f7d62; font-weight: 700; }
+    .photo-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .photo-actions .button { flex: 0 1 auto; }
+    .sync-pill { position: fixed; left: 14px; bottom: 14px; z-index: 900; display: none; align-items: center; gap: 7px; padding: 7px 11px; color: var(--teal-dark); background: rgba(255,253,248,.95); border: 1px solid rgba(213,213,203,.95); border-radius: 999px; box-shadow: 0 6px 18px rgba(38,45,41,.14); font-size: 11px; font-weight: 700; backdrop-filter: blur(10px); }
+    body.editor-mode .sync-pill, body.classroom-mode .sync-pill, body.student-mode .sync-pill { display: inline-flex; }
+    .sync-pill-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--gold); }
+    .sync-pill.is-online .sync-pill-dot { background: #5c9b70; }
+    .sync-pill.is-offline .sync-pill-dot { background: var(--danger); }
+    .sync-pill.is-busy .sync-pill-refresh { animation: spin .9s linear infinite; }
+    .sync-pill-refresh { font-size: 13px; }
+    body.student-mode .sync-pill { bottom: 74px; }
     .review-empty { display: grid; place-items: center; min-height: 620px; padding: 30px; color: var(--muted); text-align: center; }
     .review-empty strong { display: block; margin-bottom: 7px; color: var(--teal-dark); font-size: 20px; }
     .review-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
@@ -519,6 +557,30 @@
     .review-bottom { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
     .review-bottom textarea { min-height: 74px; width: 100%; padding: 10px 12px; color: var(--ink); background: #fff; border: 1px solid #d8d8cf; border-radius: 10px; resize: vertical; }
     .review-bottom-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+    .quick-comments { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .quick-comment { display: inline-flex; align-items: center; min-height: 30px; padding: 5px 11px; color: var(--teal-dark); background: #f1f6f2; border: 1px solid #cfe0d6; border-radius: 999px; font-size: 12px; }
+    .quick-comment:hover { background: var(--teal-soft); border-color: var(--teal); }
+    .quick-comment .quick-comment-remove { display: none; margin-left: 6px; color: var(--danger); font-weight: 800; }
+    .quick-comment[data-custom]:hover .quick-comment-remove { display: inline; }
+    .quick-comment-add { display: inline-flex; align-items: center; min-height: 30px; padding: 5px 11px; color: var(--muted); background: transparent; border: 1px dashed #c9c9be; border-radius: 999px; font-size: 12px; }
+    .quick-comment-add:hover { color: var(--teal-dark); border-color: var(--teal); }
+    .review-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+    .board-search { width: min(240px, 60vw); min-height: 42px; padding: 8px 12px; color: var(--ink); background: #fff; border: 1px solid #d8d8cf; border-radius: 10px; outline: none; font-size: 13px; }
+    .board-search:focus { border-color: #85aa9c; box-shadow: 0 0 0 3px rgba(133,170,156,.16); }
+    .board-menu-wrap { position: relative; display: inline-flex; }
+    .board-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; display: none; min-width: 172px; padding: 6px; background: #fffdf8; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 14px 36px rgba(23,35,30,.2); }
+    .board-menu.open { display: block; }
+    .board-menu button { display: block; width: 100%; min-height: 38px; padding: 8px 10px; color: var(--ink); background: transparent; border: 0; border-radius: 8px; font-size: 13px; text-align: left; }
+    .board-menu button:hover { background: #f2f5f0; }
+    .board-menu button.danger { color: var(--danger); }
+    .board-menu button.danger:hover { background: #fff2ee; }
+    .pending-badge { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 6px; padding: 0 6px; color: #fff; background: var(--danger); border-radius: 999px; font-size: 11px; font-weight: 800; }
+    .dirty-chip { display: none; align-items: center; gap: 5px; padding: 4px 10px; color: #805d31; background: #fff3d7; border: 1px solid #ead6a8; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .dirty-chip.show { display: inline-flex; }
+    .page-zone-count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .announcement-collapse-button { display: grid; place-items: center; width: 34px; height: 34px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 9px; font-size: 13px; }
+    .announcement-collapse-button:hover { color: var(--teal-dark); border-color: var(--teal); }
+    .announcement-surface.is-collapsed .announcement-list { display: none; }
 
     .loading { display: grid; place-items: center; min-height: 340px; color: var(--muted); }
     .loading::before { content: ""; width: 26px; height: 26px; margin-bottom: 12px; border: 3px solid #d8ded8; border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
@@ -609,6 +671,18 @@
       .photo-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .announcement-drawer { top: 62px; right: 8px; width: calc(100vw - 16px); max-height: calc(100vh - 74px); padding: 10px; }
     }
+    @media (max-width: 860px) {
+      body.student-mode .student-workspace { position: relative; }
+      body.student-mode .student-workspace .pdf-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+      body.student-mode .student-workspace .workspace-sidebar { position: absolute; top: auto; right: 0; bottom: 0; left: 0; z-index: 30; height: min(76vh, 640px); max-height: none; padding: 0 13px 14px; background: #fffdf8; border: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -14px 40px rgba(23,35,30,.22); transform: translateY(calc(100% - 56px)); transition: transform .26s cubic-bezier(.2,.8,.3,1); overscroll-behavior: contain; }
+      body.student-mode.student-drawer-open .student-workspace .workspace-sidebar { transform: translateY(0); }
+      body.student-mode .student-drawer-handle { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; height: 56px; margin: 0 -13px; padding: 0 14px; background: #fffdf8; border-bottom: 1px solid rgba(216,216,207,.7); border-radius: 18px 18px 0 0; cursor: pointer; }
+      .student-drawer-handle .drawer-grip { width: 34px; height: 4px; flex: 0 0 auto; border-radius: 999px; background: #c9cdc5; }
+      .student-drawer-handle .drawer-title { min-width: 0; flex: 1; overflow: hidden; color: var(--teal-dark); font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+      .student-drawer-handle .drawer-toggle { flex: 0 0 auto; color: var(--muted); font-size: 12px; font-weight: 700; }
+      body.student-mode .student-workspace .pdf-scroll { padding-bottom: 72px; }
+      body.student-mode .sync-pill { right: 12px; bottom: 68px; left: auto; }
+    }
     @media (pointer: coarse) {
       .toolbar-button, .button, .photo-tab { min-height: 44px; }
       .ink-controls select { min-height: 42px; }
@@ -666,6 +740,11 @@
     </div>
   </div>
   <div class="toast-stack" id="toastStack"></div>
+  <button class="sync-pill" id="syncPill" type="button" title="點一下立即同步">
+    <span class="sync-pill-dot" aria-hidden="true"></span>
+    <span id="syncPillText">尚未同步</span>
+    <span class="sync-pill-refresh" aria-hidden="true">↻</span>
+  </button>
 
   <script>
     // ============================================================================
@@ -711,6 +790,7 @@
     const CLASSROOM_POLL_INTERVAL = 3000;
     const CLASSROOM_SYNC_MAX_IN_FLIGHT = 1;
     const CLASSROOM_SUBMISSIONS_POLL_INTERVAL = 6000;
+    const DEFAULT_QUICK_COMMENTS = ["答案正確，很棒！", "想法很好，試著再補充原因。", "注意標點符號與錯別字。", "字跡再工整一些會更好。", "再看一次題目要求，答案有缺漏。"];
     const GAS_GET_MAX_ATTEMPTS = 2;
     const GAS_GET_RETRY_DELAY = 250;
     // 實測 GAS 回應曾需四十六秒；此為等待上限，成功回應不會額外等待。
@@ -812,6 +892,8 @@
       reviewImages: [],
       reviewPhotoIndex: 0,
       reviewStrokes: [],
+      reviewRedoStrokes: [],
+      reviewFilter: "all",
       reviewComment: "",
       reviewColor: "#d34f42",
       reviewWidth: 2,
@@ -825,6 +907,11 @@
       lastStudentSubmissionPollAt: 0,
       lastReviewSubmissionPollAt: 0,
       lastClassroomCountsPollAt: 0,
+      lastSyncAt: 0,
+      syncBusy: false,
+      switchingRespondent: false,
+      editorDirty: false,
+      boardSearch: "",
       outboxRetryTimer: null,
       flushBusy: false,
       connectionStatus: "unknown",
@@ -832,6 +919,7 @@
       connectionLastFailureAt: 0,
       consecutiveNetworkErrors: 0,
       imageCache: new Map(),
+      wakeLock: null,
       clientId: getOrCreateClientId()
     };
 
@@ -1537,6 +1625,58 @@
       } else {
         badge.textContent = "API 端點已設定";
       }
+      updateSyncPill();
+    }
+
+    function formatClock(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
+    }
+
+    function updateSyncPill() {
+      const pill = document.getElementById("syncPill");
+      if (!pill) return;
+      const text = document.getElementById("syncPillText");
+      const offline = navigator.onLine === false || state.connectionStatus === "offline";
+      let label;
+      if (state.demo) label = "本機示範，不需同步";
+      else if (offline) label = "離線，等待補傳";
+      else if (state.lastSyncAt) label = "已同步 " + formatClock(state.lastSyncAt);
+      else label = "尚未同步";
+      if (text) text.textContent = label;
+      pill.classList.toggle("is-online", !state.demo && !offline && Boolean(state.lastSyncAt));
+      pill.classList.toggle("is-offline", offline);
+      pill.classList.toggle("is-busy", Boolean(state.syncBusy));
+      pill.disabled = Boolean(state.syncBusy);
+      pill.title = state.demo ? "本機示範模式不需要同步" : (state.lastSyncAt ? "最後同步 " + formatClock(state.lastSyncAt) + "，點一下立即更新" : "點一下立即同步");
+    }
+
+    async function manualSyncNow() {
+      if (state.syncBusy) return;
+      if (state.demo) {
+        state.lastSyncAt = Date.now();
+        updateSyncPill();
+        showToast("本機示範模式已重新整理本機資料。", "info");
+        return;
+      }
+      if (state.view !== "editor" && state.view !== "review" && state.view !== "student") return;
+      if (!state.boardId) return;
+      state.syncBusy = true;
+      updateSyncPill();
+      try {
+        await loadClassroomSync({});
+        if (state.view === "review") await loadReviewSubmissions(true);
+        else if (state.view === "student") await loadStudentSubmissions();
+        state.lastSyncAt = Date.now();
+        showToast("已取得最新資料。", "success");
+      } catch (error) {
+        showToast("更新失敗：" + (error.message || "請稍後再試。"), "error");
+      } finally {
+        state.syncBusy = false;
+        updateSyncPill();
+      }
     }
 
     function markNetworkSuccess(action) {
@@ -1628,6 +1768,8 @@
         if (event.target.id === "settingsModal") closeSettingsModal();
       });
       document.getElementById("modalCloseButton").addEventListener("click", function () { closeModal(false); });
+      const syncPill = document.getElementById("syncPill");
+      if (syncPill) syncPill.addEventListener("click", function () { manualSyncNow(); });
       document.getElementById("modalOverlay").addEventListener("click", function (event) {
         if (event.target.id === "modalOverlay") closeModal(false);
       });
@@ -1680,9 +1822,27 @@
         cancelClassroomSyncRequests();
         showToast("目前離線，資料會先保留在本機。", "warning");
       });
+      document.addEventListener("click", function (event) {
+        const popover = document.getElementById("classroomToolbarPopover");
+        if (popover && popover.classList.contains("open") && !popover.contains(event.target) && !(event.target.closest && event.target.closest("#classroomMoreButton"))) toggleToolbarPopover(false);
+        if (!(event.target.closest && event.target.closest(".board-menu-wrap"))) closeBoardMenus();
+        if (document.body.classList.contains("areas-drawer-open") && state.view === "review" && !document.getElementById("modalOverlay").classList.contains("show")) {
+          const sidebar = document.querySelector(".classroom-sidebar");
+          if (sidebar && !sidebar.contains(event.target) && !(event.target.closest && event.target.closest("#classroomAreasButton"))) toggleAreasDrawer(false);
+        }
+      });
+      document.addEventListener("fullscreenchange", updateFullscreenButton);
+      window.addEventListener("beforeunload", function (event) {
+        if (state.editorDirty && state.view === "editor") {
+          event.preventDefault();
+          event.returnValue = "";
+        }
+      });
+      document.addEventListener("webkitfullscreenchange", updateFullscreenButton);
       document.addEventListener("visibilitychange", function () {
         if (document.visibilityState === "hidden") {
           cancelClassroomSyncRequests();
+          releaseClassroomWakeLock();
           return;
         }
         if (state.view === "review" || state.view === "student") pollClassroomView();
@@ -1708,7 +1868,7 @@
       document.addEventListener("gesturechange", function (event) { event.preventDefault(); });
       document.addEventListener("gestureend", function (event) { event.preventDefault(); });
       window.addEventListener("keydown", function (event) {
-        if (event.target && event.target.matches("input, textarea, select")) return;
+        if (event.target && event.target.matches && event.target.matches("input, textarea, select")) return;
         if (event.key === "e" || event.key === "E") {
           event.preventDefault();
           togglePencilEraser();
@@ -1776,7 +1936,9 @@
       const title = surface === "student" ? "課堂公告" : "公告與常用連結";
       const description = "";
       const manageButton = canManage ? "<button class=\"button small primary\" data-announcement-add type=\"button\">＋ 新增公告</button>" : "";
-      return "<section class=\"announcement-surface" + (compact ? " announcement-surface-compact" : "") + "\" data-announcement-surface=\"" + surface + "\"><div class=\"announcement-heading\"><div><p class=\"eyebrow\">CLASSROOM LINKS</p><h2>" + title + "</h2>" + description + "</div>" + manageButton + "</div><div class=\"announcement-list\" id=\"announcementList-" + surface + "\"><div class=\"inline-message\">正在讀取公告……</div></div></section>";
+      const collapsed = localStorage.getItem(APP_KEY + "announcement_collapsed") === "1";
+      const collapseButton = "<button class=\"announcement-collapse-button\" data-announcement-collapse type=\"button\" title=\"" + (collapsed ? "展開公告" : "收合公告") + "\" aria-expanded=\"" + (collapsed ? "false" : "true") + "\">" + (collapsed ? "▼" : "▲") + "</button>";
+      return "<section class=\"announcement-surface" + (compact ? " announcement-surface-compact" : "") + (collapsed ? " is-collapsed" : "") + "\" data-announcement-surface=\"" + surface + "\"><div class=\"announcement-heading\"><div><p class=\"eyebrow\">CLASSROOM LINKS</p><h2>" + title + "</h2>" + description + "</div>" + manageButton + collapseButton + "</div><div class=\"announcement-list\" id=\"announcementList-" + surface + "\"><div class=\"inline-message\">正在讀取公告……</div></div></section>";
     }
 
     function renderAnnouncementList(surface) {
@@ -1810,6 +1972,11 @@
     function bindAnnouncementSurface(surface) {
       const root = document.querySelector("[data-announcement-surface=\"" + surface + "\"]");
       if (!root) return;
+      const collapseButton = root.querySelector("[data-announcement-collapse]");
+      if (collapseButton && collapseButton.dataset.bound !== "1") {
+        collapseButton.dataset.bound = "1";
+        collapseButton.addEventListener("click", toggleAnnouncementCollapsed);
+      }
       const addButton = root.querySelector("[data-announcement-add]");
       if (addButton && addButton.dataset.bound !== "1") {
         addButton.dataset.bound = "1";
@@ -1832,7 +1999,26 @@
       });
     }
 
+    function toggleAnnouncementCollapsed() {
+      const collapsed = localStorage.getItem(APP_KEY + "announcement_collapsed") === "1";
+      try { localStorage.setItem(APP_KEY + "announcement_collapsed", collapsed ? "0" : "1"); } catch (error) {}
+      updateAnnouncementCollapseUi();
+    }
+
+    function updateAnnouncementCollapseUi() {
+      const collapsed = localStorage.getItem(APP_KEY + "announcement_collapsed") === "1";
+      document.querySelectorAll("[data-announcement-surface]").forEach(function (root) {
+        root.classList.toggle("is-collapsed", collapsed);
+        const button = root.querySelector("[data-announcement-collapse]");
+        if (!button) return;
+        button.textContent = collapsed ? "▼" : "▲";
+        button.title = collapsed ? "展開公告" : "收合公告";
+        button.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      });
+    }
+
     function renderAnnouncementSurfaces() {
+      updateAnnouncementCollapseUi();
       document.querySelectorAll("[data-announcement-surface]").forEach(function (root) {
         renderAnnouncementList(root.dataset.announcementSurface);
         bindAnnouncementSurface(root.dataset.announcementSurface);
@@ -2276,13 +2462,15 @@
       for (const fileId of fileIds) await localDelete("files", fileId);
     }
 
-    async function removeLocalBoardData(boardId) {
+    async function removeLocalBoardData(boardId, protectedFileIds) {
       const key = String(boardId || "");
       const board = await localGet("boards", boardId);
       const materialFileIds = new Set(normalizeMaterials(board, board && board.materials).map(function (item) { return String(item.pdfFileId || ""); }).filter(Boolean));
+      const keepFileIds = protectedFileIds instanceof Set ? protectedFileIds : new Set();
       const submissions = (await localAll("submissions")).filter(function (item) { return String(item.boardId) === key; });
       const submissionIds = new Set(submissions.map(function (item) { return String(item.id); }));
       const files = (await localAll("files")).filter(function (item) {
+        if (keepFileIds.has(String(item.id))) return false;
         return String(item.boardId) === key || submissionIds.has(String(item.submissionId)) || materialFileIds.has(String(item.id));
       });
       const outbox = (await localAll("outbox")).filter(function (item) {
@@ -2420,7 +2608,7 @@
       { actions: ["settings", "verifyAdmin", "logoutAdmin", "sheetUrl"], handler: localStaticActions },
       { actions: ["listAnnouncements", "createAnnouncement", "updateAnnouncement", "reorderAnnouncements", "deleteAnnouncement"], handler: localAnnouncementActions },
       { actions: ["listInk", "saveInk", "classroomSync", "saveClassroomState"], handler: localInkAndClassroomActions },
-      { actions: ["listPublicBoards", "listBoards", "getBoard", "getFile", "createBoard", "updateBoard", "createMaterial", "updateMaterial", "deleteMaterial", "archiveBoard", "deleteBoard"], handler: localBoardActions },
+      { actions: ["listPublicBoards", "listBoards", "getBoard", "getFile", "createBoard", "duplicateBoard", "updateBoard", "createMaterial", "updateMaterial", "deleteMaterial", "archiveBoard", "deleteBoard"], handler: localBoardActions },
       { actions: ["saveSubmission", "listSubmissions", "saveFeedback", "deleteSubmission"], handler: localSubmissionActions }
     ];
 
@@ -2573,7 +2761,16 @@
 
     async function localBoardActions(action, data) {
       if (action === "listPublicBoards") return { ok: true, data: (await localAll("boards")).filter(function (board) { return board.status !== "封存"; }).map(publicBoardSummary) };
-      if (action === "listBoards") return { ok: true, data: (await localAll("boards")).filter(function (board) { return board.status !== "封存"; }) };
+      if (action === "listBoards") {
+        const rows = (await localAll("boards")).filter(function (board) { return board.status !== "封存"; });
+        const counts = {};
+        (await localAll("submissions")).forEach(function (item) {
+          if (String(item.status || "") === "已批改") return;
+          const key = String(item.boardId || "");
+          if (key) counts[key] = (counts[key] || 0) + 1;
+        });
+        return { ok: true, data: rows.map(function (board) { return Object.assign({}, board, { pendingCount: counts[String(board.id)] || 0 }); }) };
+      }
       if (action === "getBoard") {
         const board = await localGet("boards", data.boardId);
         if (!board || board.status === "封存") throw new Error("找不到指定教材版面。");
@@ -2603,6 +2800,35 @@
          board.answerMasks = normalizeAnswerMasks(Array.isArray(data.answerMasks) ? data.answerMasks : [], board.id);
          await localPut("boards", board);
          return { ok: true, board: board, materials: board.materials, areas: board.areas, answerMasks: board.answerMasks };
+      }
+      if (action === "duplicateBoard") {
+        const board = await localGet("boards", data.boardId);
+        if (!board) throw new Error("找不到指定教材版面。");
+        const now = new Date().toISOString();
+        const copy = JSON.parse(JSON.stringify(board));
+        copy.id = createId("B");
+        copy.name = (String(board.name || "未命名版面") + "（副本）").slice(0, 80);
+        copy.status = "啟用";
+        copy.createdAt = now;
+        copy.updatedAt = now;
+        copy.materials = (board.materials || []).map(function (material, index) {
+          return Object.assign({}, material, { id: createId("M"), boardId: copy.id, order: Number(material.order) || index + 1, createdAt: now, updatedAt: now });
+        });
+        const materialIdMap = {};
+        (board.materials || []).forEach(function (material, index) {
+          materialIdMap[String(material.id)] = copy.materials[index] ? copy.materials[index].id : legacyMaterialId(copy.id);
+        });
+        copy.pdfFileId = board.pdfFileId || "";
+        copy.pdfFileName = board.pdfFileName || "";
+        copy.pdfMime = board.pdfMime || "";
+        copy.areas = (board.areas || []).map(function (area) {
+          return Object.assign({}, area, { boardId: copy.id, materialId: materialIdMap[String(area.materialId)] || legacyMaterialId(copy.id) });
+        });
+        copy.answerMasks = (board.answerMasks || []).map(function (mask) {
+          return Object.assign({}, mask, { boardId: copy.id, materialId: materialIdMap[String(mask.materialId)] || legacyMaterialId(copy.id) });
+        });
+        await localPut("boards", copy);
+        return { ok: true, board: copy, materials: copy.materials, areas: copy.areas, answerMasks: copy.answerMasks };
       }
       if (action === "updateBoard") {
         const board = await localGet("boards", data.boardId);
@@ -2718,7 +2944,13 @@
       }
       if (action === "deleteBoard") {
         const board = await localGet("boards", data.boardId);
-        const deleted = await removeLocalBoardData(data.boardId);
+        const otherBoards = (await localAll("boards")).filter(function (item) { return String(item.id) !== String(data.boardId); });
+        const stillUsedFileIds = new Set();
+        otherBoards.forEach(function (item) {
+          if (item && item.pdfFileId) stillUsedFileIds.add(String(item.pdfFileId));
+          (item.materials || []).forEach(function (material) { if (material && material.pdfFileId) stillUsedFileIds.add(String(material.pdfFileId)); });
+        });
+        const deleted = await removeLocalBoardData(data.boardId, stillUsedFileIds);
         return { ok: true, board: board, deleted: deleted };
       }
     }
@@ -3433,9 +3665,14 @@
       return routeRenderPromise;
     }
 
-    function goView(view, boardId) {
+    async function goView(view, boardId) {
       const targetView = ["portal", "manager", "editor", "review", "student"].indexOf(view) > -1 ? view : "portal";
       const targetBoardId = String(boardId || "");
+      if (state.editorDirty && state.view === "editor" && (targetView !== "editor" || targetBoardId !== String(state.boardId))) {
+        const leave = await showModal("有未儲存的變更", "教材版面還有變更尚未儲存，離開後這些變更會遺失。確定要離開嗎？", "confirm");
+        if (!leave) return;
+        markEditorDirty(false);
+      }
       const currentRoute = readRoute();
       if (currentRoute.view === targetView && String(currentRoute.boardId || "") === targetBoardId) return;
       state.view = targetView;
@@ -3476,6 +3713,8 @@
       document.body.classList.toggle("classroom-mode", state.view === "review" && Boolean(state.boardId));
       document.body.classList.toggle("student-mode", state.view === "student" && Boolean(state.boardId));
       document.body.classList.toggle("editor-mode", state.view === "editor" && Boolean(state.boardId));
+      if (state.view !== "student") document.body.classList.remove("student-drawer-open");
+      if (state.view !== "review") { document.body.classList.remove("areas-drawer-open"); releaseClassroomWakeLock(); }
       updateTopbarForRoute(state.view);
       setConnectionBadge();
       setOfflineNote(!navigator.onLine);
@@ -3570,14 +3809,26 @@
 
     async function renderManagerView(generation) {
       const main = document.getElementById("appMain");
-      main.innerHTML = "<section class=\"dashboard-compact-head\"><div><p class=\"eyebrow\">TEACHER WORKSPACE</p><h1>我的教材版面</h1></div><div class=\"dashboard-compact-actions\"><span class=\"meta-chip\" id=\"boardCount\">載入中</span><button class=\"button primary\" id=\"createBoardButton\" type=\"button\">＋ 建立教材版面</button></div></section><div class=\"offline-note\">目前離線，已儲存的本機資料仍可操作；新的照片與批改會在恢復連線後補傳。</div><div class=\"board-grid\" id=\"boardGrid\"><div class=\"loading-wrap loading\">正在讀取教材版面</div></div>";
+      main.innerHTML = "<section class=\"dashboard-compact-head\"><div><p class=\"eyebrow\">TEACHER WORKSPACE</p><h1>我的教材版面</h1></div><div class=\"dashboard-compact-actions\"><span class=\"meta-chip\" id=\"boardCount\">載入中</span><input id=\"boardSearchField\" class=\"board-search\" type=\"search\" placeholder=\"搜尋名稱、說明或檔名\" aria-label=\"搜尋教材版面\"><button class=\"button primary\" id=\"createBoardButton\" type=\"button\">＋ 建立教材版面</button></div></section><div class=\"offline-note\">目前離線，已儲存的本機資料仍可操作；新的照片與批改會在恢復連線後補傳。</div><div class=\"board-grid\" id=\"boardGrid\"><div class=\"loading-wrap loading\">正在讀取教材版面</div></div>";
       document.getElementById("createBoardButton").addEventListener("click", function () { openBoardForm(); });
+      const boardSearchField = document.getElementById("boardSearchField");
+      if (boardSearchField) {
+        boardSearchField.value = state.boardSearch || "";
+        boardSearchField.addEventListener("input", function () { state.boardSearch = boardSearchField.value; renderBoardCards(); });
+      }
       const announcementAnchor = main.querySelector(".dashboard-compact-head");
       if (announcementAnchor) announcementAnchor.insertAdjacentHTML("afterend", announcementSurfaceHtml("manager", true, false));
       renderAnnouncementSurfaces();
       loadAnnouncements().catch(function () {});
 
        const localBoards = (await localAll("boards")).filter(function (board) { return board.status !== "封存"; });
+       const localPendingCounts = {};
+       (await localAll("submissions")).forEach(function (item) {
+         if (String(item.status || "") === "已批改") return;
+         const key = String(item.boardId || "");
+         if (key) localPendingCounts[key] = (localPendingCounts[key] || 0) + 1;
+       });
+       localBoards.forEach(function (board) { board.pendingCount = localPendingCounts[String(board.id)] || 0; });
        if (!isCurrentRouteLoad(generation, "manager", "")) return;
        if (localBoards.length) {
         state.boards = localBoards;
@@ -3607,22 +3858,99 @@
       const grid = document.getElementById("boardGrid");
       const count = document.getElementById("boardCount");
       state.boards = sortBoardsByUpdatedAt(state.boards);
-      if (count) count.textContent = state.boards.length + " 個版面";
+      const keyword = String(state.boardSearch || "").trim().toLowerCase();
+      const boards = keyword ? state.boards.filter(function (board) {
+        return [board.name, board.description, board.pdfFileName].some(function (value) { return String(value || "").toLowerCase().indexOf(keyword) > -1; });
+      }) : state.boards;
+      if (count) count.textContent = keyword ? boards.length + "／" + state.boards.length + " 個版面" : state.boards.length + " 個版面";
       if (!state.boards.length) {
         grid.innerHTML = "<div class=\"empty-state\"><div class=\"empty-icon\">卷</div><strong>還沒有教材版面</strong><p>先建立一個課次，接著上傳 PDF 並在頁面上圈出問答區。</p><button class=\"button primary\" id=\"emptyCreateButton\" type=\"button\">建立第一個版面</button></div>";
         document.getElementById("emptyCreateButton").addEventListener("click", function () { openBoardForm(); });
         return;
       }
-      grid.innerHTML = state.boards.map(function (board, index) {
+      if (!boards.length) {
+        grid.innerHTML = "<div class=\"empty-state\"><div class=\"empty-icon\">卷</div><strong>沒有符合「" + escapeHtml(String(state.boardSearch || "").trim()) + "」的版面</strong><p>換個關鍵字，或清除搜尋再看看。</p></div>";
+        return;
+      }
+      grid.innerHTML = boards.map(function (board, index) {
         const letter = String(index + 1).padStart(2, "0");
-        return "<article class=\"board-card\"><div class=\"board-card-top\"><div class=\"board-mark\">" + letter + "</div><button class=\"icon-button\" data-share-board=\"" + escapeHtml(board.id) + "\" type=\"button\" title=\"分享學生 QR Code\" style=\"font-size:16px;\">📱</button></div><h3>" + escapeHtml(board.name) + "</h3><p>" + escapeHtml(board.description || "尚未寫入版面說明。") + "</p><div class=\"board-meta\"><span class=\"meta-chip\">" + escapeHtml(board.pdfFileName || "尚未上傳 PDF") + "</span><span class=\"meta-chip\">更新於 " + escapeHtml(formatTime(board.updatedAt)) + "</span></div><div class=\"board-actions\"><button class=\"button small teal\" data-edit-board=\"" + escapeHtml(board.id) + "\" type=\"button\">設定教材</button><button class=\"button small\" data-review-board=\"" + escapeHtml(board.id) + "\" type=\"button\">批改作答</button><button class=\"button small subtle\" data-student-board=\"" + escapeHtml(board.id) + "\" type=\"button\">學生頁</button></div></article>";
+        const pendingCount = Number(board.pendingCount) || 0;
+        const pendingChip = pendingCount > 0 ? "<span class=\"meta-chip\">" + pendingCount + " 筆待批改</span>" : "";
+        const pendingBadge = pendingCount > 0 ? "<span class=\"pending-badge\" title=\"待批改作答數\">" + pendingCount + "</span>" : "";
+        return "<article class=\"board-card\"><div class=\"board-card-top\"><div class=\"board-mark\">" + letter + "</div><button class=\"icon-button\" data-share-board=\"" + escapeHtml(board.id) + "\" type=\"button\" title=\"分享學生 QR Code\" style=\"font-size:16px;\">📱</button></div><h3>" + escapeHtml(board.name) + "</h3><p>" + escapeHtml(board.description || "尚未寫入版面說明。") + "</p><div class=\"board-meta\"><span class=\"meta-chip\">" + escapeHtml(board.pdfFileName || "尚未上傳 PDF") + "</span>" + pendingChip + "<span class=\"meta-chip\">更新於 " + escapeHtml(formatTime(board.updatedAt)) + "</span></div><div class=\"board-actions\"><button class=\"button small teal\" data-edit-board=\"" + escapeHtml(board.id) + "\" type=\"button\">設定教材</button><button class=\"button small\" data-review-board=\"" + escapeHtml(board.id) + "\" type=\"button\">進入課堂區" + pendingBadge + "</button><button class=\"button small subtle\" data-student-board=\"" + escapeHtml(board.id) + "\" type=\"button\">學生頁</button></div></article>";
       }).join("");
       grid.querySelectorAll("[data-edit-board]").forEach(function (button) { button.addEventListener("click", function () { goView("editor", button.dataset.editBoard); }); });
-       grid.querySelectorAll("[data-review-board]").forEach(function (button) { button.textContent = "進入課堂區"; button.addEventListener("click", function () { goView("review", button.dataset.reviewBoard); }); });
-       grid.querySelectorAll("[data-student-board]").forEach(function (button) { button.addEventListener("click", function () { goView("student", button.dataset.studentBoard); }); });
-       grid.querySelectorAll("[data-share-board]").forEach(function (button) { button.addEventListener("click", function () { const board = state.boards.find(function (item) { return item.id === button.dataset.shareBoard; }); if (board) openShareModal(board); }); });
-       grid.querySelectorAll(".board-card").forEach(function (card, index) { const board = state.boards[index]; const actions = card.querySelector(".board-actions"); if (!board || !actions) return; const button = document.createElement("button"); button.className = "button small danger"; button.type = "button"; button.textContent = "刪除版面"; button.addEventListener("click", function () { deleteBoardById(board.id, board); }); actions.appendChild(button); });
-     }
+      grid.querySelectorAll("[data-review-board]").forEach(function (button) { button.addEventListener("click", function () { goView("review", button.dataset.reviewBoard); }); });
+      grid.querySelectorAll("[data-student-board]").forEach(function (button) { button.addEventListener("click", function () { goView("student", button.dataset.studentBoard); }); });
+      grid.querySelectorAll("[data-share-board]").forEach(function (button) { button.addEventListener("click", function () { const board = state.boards.find(function (item) { return item.id === button.dataset.shareBoard; }); if (board) openShareModal(board); }); });
+      grid.querySelectorAll(".board-card").forEach(function (card, index) {
+        const board = boards[index];
+        const actions = card.querySelector(".board-actions");
+        if (!board || !actions) return;
+        const wrap = document.createElement("div");
+        wrap.className = "board-menu-wrap";
+        const menuButton = document.createElement("button");
+        menuButton.className = "button small subtle";
+        menuButton.type = "button";
+        menuButton.textContent = "⋯";
+        menuButton.title = "更多動作：複製、封存或刪除";
+        menuButton.setAttribute("aria-haspopup", "true");
+        const menu = document.createElement("div");
+        menu.className = "board-menu";
+        menu.innerHTML = "<button type=\"button\" data-menu-copy>⎘ 複製版面</button><button type=\"button\" data-menu-archive>🗄 封存版面</button><button type=\"button\" class=\"danger\" data-menu-delete>× 刪除版面</button>";
+        menu.querySelector("[data-menu-copy]").addEventListener("click", function () { closeBoardMenus(); duplicateBoardById(board.id, board); });
+        menu.querySelector("[data-menu-archive]").addEventListener("click", function () { closeBoardMenus(); archiveBoardById(board.id, board); });
+        menu.querySelector("[data-menu-delete]").addEventListener("click", function () { closeBoardMenus(); deleteBoardById(board.id, board); });
+        menuButton.addEventListener("click", function (event) {
+          event.stopPropagation();
+          const isOpen = menu.classList.contains("open");
+          closeBoardMenus();
+          if (!isOpen) menu.classList.add("open");
+        });
+        wrap.appendChild(menuButton);
+        wrap.appendChild(menu);
+        actions.appendChild(wrap);
+      });
+    }
+
+    function closeBoardMenus() {
+      document.querySelectorAll(".board-menu.open").forEach(function (menu) { menu.classList.remove("open"); });
+    }
+
+    async function duplicateBoardById(boardId, board) {
+      const source = board || state.boards.find(function (item) { return String(item.id) === String(boardId); });
+      const name = source && source.name ? source.name : "教材版面";
+      try {
+        showToast("正在建立「" + name + "」的副本……", "info");
+        const result = state.demo ? await localRequest("duplicateBoard", { boardId: boardId }) : await managerApi("duplicateBoard", { boardId: boardId });
+        const newBoard = result && result.board;
+        if (newBoard) {
+          await cacheBoardLocally(newBoard, result.areas || []);
+          state.boards = state.boards.filter(function (item) { return String(item.id) !== String(newBoard.id); });
+          state.boards.push(Object.assign({ pendingCount: 0 }, newBoard));
+          renderBoardCards();
+          showToast("已建立副本「" + (newBoard.name || name + "（副本）") + "」。", "success");
+        }
+      } catch (error) {
+        await showModal("複製版面失敗", error.message || "請稍後再試。", "error");
+      }
+    }
+
+    async function archiveBoardById(boardId, board) {
+      const target = board || state.boards.find(function (item) { return String(item.id) === String(boardId); });
+      const name = target && target.name ? target.name : "這個教材版面";
+      const ok = await showModal("封存教材版面", "封存後「" + name + "」的學生連結將無法開啟，本機仍會保留資料。確定要封存嗎？", "confirm");
+      if (!ok) return;
+      try {
+        await commitLocalMutation("archiveBoard", { boardId: boardId });
+        state.boards = state.boards.filter(function (item) { return String(item.id) !== String(boardId); });
+        if (String(state.boardId) === String(boardId)) { state.board = null; state.boardId = ""; }
+        showToast(state.demo ? "教材版面已封存。" : "已先在本機封存，背景同步中。", state.demo ? "success" : "warning");
+        renderBoardCards();
+      } catch (error) {
+        await showModal("封存失敗", error.message || "請稍後再試。", "error");
+      }
+    }
 
     function openBoardForm(board) {
       const current = board || {};
@@ -3660,7 +3988,7 @@
        await loadBoardContext(boardId);
        if (!isCurrentRouteLoad(generation, "editor", boardId)) return;
        state.teacherInk.clear();
-      main.innerHTML = "<section class=\"workspace-shell\"><div class=\"workspace-head\"><div><p class=\"eyebrow\">TEACHER EDITOR</p><h2>設定問答區</h2><p>在 PDF 上拖曳框選學生要回答的位置。</p></div><div class=\"workspace-actions\"><button class=\"button subtle small\" id=\"backManagerButton\" type=\"button\">返回版面總覽</button><button class=\"button primary small\" id=\"saveBoardButton\" type=\"button\">儲存版面</button></div></div><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"prevPageButton\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"nextPageButton\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"zoomOutButton\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"zoomInButton\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"fitButton\" type=\"button\">適合</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"drawZoneButton\" type=\"button\">＋ 問答區</button></div></div><div class=\"pdf-scroll\" id=\"editorPdfScroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"sidebar-section\"><div class=\"sidebar-title\">教材資料</div><div class=\"field\"><label for=\"editorNameField\">版面名稱</label><input id=\"editorNameField\" maxlength=\"80\" value=\"" + escapeHtml(state.board.name) + "\"></div><div class=\"field\"><label for=\"editorDescriptionField\">版面說明</label><textarea id=\"editorDescriptionField\" maxlength=\"300\">" + escapeHtml(state.board.description || "") + "</textarea></div><label class=\"button full subtle\" for=\"replacePdfField\">↥ 更換 PDF<input id=\"replacePdfField\" type=\"file\" accept=\"application/pdf,.pdf\"></label><p class=\"helper\">" + escapeHtml(state.board.pdfFileName || "尚未上傳 PDF") + "</p></div><div class=\"sidebar-section\"><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"areaCount\">0</span></div><div class=\"area-list\" id=\"areaList\"></div><p class=\"helper\">按「＋ 問答區」後，在 PDF 上拖曳框出區域。</p></div><div class=\"sidebar-section\"><button class=\"button full subtle\" id=\"shareEditorButton\" type=\"button\">分享學生作答連結</button><button class=\"button full danger\" id=\"archiveBoardButton\" type=\"button\" style=\"margin-top:8px;\">封存這個版面</button></div></aside></div></section>";
+      main.innerHTML = "<section class=\"workspace-shell\"><div class=\"workspace-head\"><div><p class=\"eyebrow\">TEACHER EDITOR</p><h2>設定問答區</h2><p>在 PDF 上拖曳框選學生要回答的位置。</p></div><div class=\"workspace-actions\"><span class=\"dirty-chip\" id=\"editorDirtyChip\">● 有未儲存變更</span><button class=\"button subtle small\" id=\"backManagerButton\" type=\"button\">返回版面總覽</button><button class=\"button primary small\" id=\"saveBoardButton\" type=\"button\">儲存版面</button></div></div><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"prevPageButton\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"nextPageButton\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"zoomOutButton\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"zoomInButton\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"fitButton\" type=\"button\">適合</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"drawZoneButton\" type=\"button\">＋ 問答區</button></div></div><div class=\"pdf-scroll\" id=\"editorPdfScroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"sidebar-section\"><div class=\"sidebar-title\">教材資料</div><div class=\"field\"><label for=\"editorNameField\">版面名稱</label><input id=\"editorNameField\" maxlength=\"80\" value=\"" + escapeHtml(state.board.name) + "\"></div><div class=\"field\"><label for=\"editorDescriptionField\">版面說明</label><textarea id=\"editorDescriptionField\" maxlength=\"300\">" + escapeHtml(state.board.description || "") + "</textarea></div><label class=\"button full subtle\" for=\"replacePdfField\">↥ 更換 PDF<input id=\"replacePdfField\" type=\"file\" accept=\"application/pdf,.pdf\"></label><p class=\"helper\">" + escapeHtml(state.board.pdfFileName || "尚未上傳 PDF") + "</p></div><div class=\"sidebar-section\"><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"areaCount\">0</span></div><div class=\"area-list\" id=\"areaList\"></div><p class=\"helper\">按「＋ 問答區」後，在 PDF 上拖曳框出區域。</p></div><div class=\"sidebar-section\"><button class=\"button full subtle\" id=\"shareEditorButton\" type=\"button\">分享學生作答連結</button><button class=\"button full danger\" id=\"archiveBoardButton\" type=\"button\" style=\"margin-top:8px;\">封存這個版面</button></div></aside></div></section>";
        bindEditorEvents();
        renderEditorAreaList();
        await renderPdfPage();
@@ -3682,6 +4010,26 @@
       document.getElementById("nextPageButton").addEventListener("click", function () { changePage(1); });
       document.getElementById("zoomOutButton").addEventListener("click", function () { setZoom(state.zoom - .1); });
       document.getElementById("zoomInButton").addEventListener("click", function () { setZoom(state.zoom + .1); });
+      const zoneGroup = document.getElementById("drawZoneButton") ? document.getElementById("drawZoneButton").parentElement : null;
+      if (zoneGroup && !document.getElementById("pageZoneCount")) {
+        const zoneCountLabel = document.createElement("span");
+        zoneCountLabel.className = "page-zone-count";
+        zoneCountLabel.id = "pageZoneCount";
+        zoneGroup.insertBefore(zoneCountLabel, document.getElementById("drawZoneButton"));
+        const jumpButton = document.createElement("button");
+        jumpButton.className = "toolbar-button";
+        jumpButton.id = "jumpZonedPageButton";
+        jumpButton.type = "button";
+        jumpButton.textContent = "⇥ 圖釘頁";
+        jumpButton.title = "跳到下一個有圖釘的頁面";
+        jumpButton.addEventListener("click", jumpNextZonedPage);
+        zoneGroup.insertBefore(jumpButton, document.getElementById("drawZoneButton"));
+      }
+      const editorNameField = document.getElementById("editorNameField");
+      if (editorNameField) editorNameField.addEventListener("input", function () { markEditorDirty(true); });
+      const editorDescriptionField = document.getElementById("editorDescriptionField");
+      if (editorDescriptionField) editorDescriptionField.addEventListener("input", function () { markEditorDirty(true); });
+      document.addEventListener("keydown", editorKeyHandler);
       document.getElementById("drawZoneButton").addEventListener("click", toggleZoneDrawing);
        document.getElementById("replacePdfField").addEventListener("change", handlePdfReplace);
       bindPdfDrop_(document.getElementById("replacePdfField").closest(".sidebar-section"), document.getElementById("replacePdfField"));
@@ -3702,6 +4050,87 @@
        movePageNavigationToBottom(toolbar, pdfMain, "editorPageNav");
        bindPdfSwipe(document.getElementById("editorPdfScroll"));
      }
+
+    function markEditorDirty(value) {
+      const dirty = Boolean(value);
+      if (state.editorDirty === dirty) {
+        updateEditorDirtyUi();
+        return;
+      }
+      state.editorDirty = dirty;
+      updateEditorDirtyUi();
+    }
+
+    function updateEditorDirtyUi() {
+      const chip = document.getElementById("editorDirtyChip");
+      if (chip) chip.classList.toggle("show", state.editorDirty);
+      const saveButton = document.getElementById("saveBoardButton");
+      if (saveButton) saveButton.textContent = state.editorDirty ? "儲存版面●" : "儲存版面";
+    }
+
+    function editorKeyHandler(event) {
+      if (state.view !== "editor") return;
+      if (event.key === "Escape") {
+        if (state.drawingZone) { toggleZoneDrawing(); return; }
+        if (state.answerMaskDrawing) { toggleAnswerMaskDrawing(); return; }
+      }
+      const target = event.target;
+      if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].indexOf(target.tagName) > -1)) return;
+      if (event.key.indexOf("Arrow") !== 0) return;
+      const area = state.areas.find(function (item) { return String(item.id) === String(state.selectedAreaId); });
+      if (!area) return;
+      const step = event.shiftKey ? 0.01 : 0.002;
+      const maxX = Math.max(0, 1 - (Number(area.width) || 0.03));
+      const maxY = Math.max(0, 1 - (Number(area.height) || 0.03));
+      if (event.key === "ArrowLeft") area.x = clamp(Number(area.x) - step, 0, maxX);
+      else if (event.key === "ArrowRight") area.x = clamp(Number(area.x) + step, 0, maxX);
+      else if (event.key === "ArrowUp") area.y = clamp(Number(area.y) - step, 0, maxY);
+      else if (event.key === "ArrowDown") area.y = clamp(Number(area.y) + step, 0, maxY);
+      else return;
+      event.preventDefault();
+      renderZones(true);
+      markEditorDirty(true);
+    }
+
+    function updatePageZoneCount() {
+      if (state.view !== "editor") return;
+      const label = document.getElementById("pageZoneCount");
+      if (!label) return;
+      const currentId = String(state.activeMaterialId || legacyMaterialId(state.boardId));
+      const pageZones = state.areas.filter(function (area) {
+        return String(area.materialId || legacyMaterialId(state.boardId)) === currentId && Number(area.page) === Number(state.currentPage);
+      }).length;
+      const pageMasks = (state.answerMasks || []).filter(function (mask) {
+        return String(mask.materialId || legacyMaterialId(state.boardId)) === currentId && Number(mask.page) === Number(state.currentPage);
+      }).length;
+      label.textContent = "圖釘 " + pageZones + "・遮罩 " + pageMasks;
+      const jumpButton = document.getElementById("jumpZonedPageButton");
+      if (jumpButton) jumpButton.disabled = state.areas.filter(function (area) { return String(area.materialId || legacyMaterialId(state.boardId)) === currentId; }).length === 0;
+    }
+
+    function jumpNextZonedPage() {
+      if (!state.pdf || state.view !== "editor") return;
+      const currentId = String(state.activeMaterialId || legacyMaterialId(state.boardId));
+      const pages = new Set(state.areas.filter(function (area) { return String(area.materialId || legacyMaterialId(state.boardId)) === currentId; }).map(function (area) { return Number(area.page) || 1; }));
+      if (!pages.size) {
+        showToast("這份教材還沒有任何圖釘。", "info");
+        return;
+      }
+      const total = Number(state.pdf.numPages) || 1;
+      for (let offset = 1; offset <= total; offset += 1) {
+        const candidate = ((Number(state.currentPage) - 1 + offset) % total) + 1;
+        if (pages.has(candidate)) {
+          if (candidate === Number(state.currentPage)) {
+            showToast("整份教材只有這一頁有圖釘。", "info");
+            return;
+          }
+          state.currentPage = candidate;
+          renderPdfPage();
+          showToast("跳到第 " + candidate + " 頁（有圖釘）。", "info");
+          return;
+        }
+      }
+    }
 
     function bindTeacherInkToolbarEvents() {
        const actions = { undoTeacherInkButton: undoTeacherInk, clearTeacherInkButton: clearTeacherInk, clearAllTeacherInkButton: clearAllTeacherInk };
@@ -3778,6 +4207,7 @@
       let initialZoom = 1;
       let isPinching = false;
       let lastPinchScale = 1;
+      let lastTap = null;
 
         scroll.addEventListener("touchstart", function (event) {
           if (touchEventHasStylus(event)) return;
@@ -3863,6 +4293,22 @@
         const dt = performance.now() - startTouch.time;
         startTouch = null;
         lastTouch = null;
+        if (event.target && event.target.closest && event.target.closest(".zone")) {
+          lastTap = null;
+          return;
+        }
+        const isTap = dt < 260 && Math.abs(dx) < 14 && Math.abs(dy) < 14;
+        if (isTap) {
+          const now = performance.now();
+          if (lastTap && now - lastTap.time < 320 && Math.hypot(touch.clientX - lastTap.x, touch.clientY - lastTap.y) < 44) {
+            lastTap = null;
+            toggleZoomAtPoint(scroll, touch.clientX, touch.clientY);
+            return;
+          }
+          lastTap = { time: now, x: touch.clientX, y: touch.clientY };
+          return;
+        }
+        lastTap = null;
         if (dt < 400 && Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4) {
           changePage(dx < 0 ? 1 : -1);
         }
@@ -3891,6 +4337,23 @@
           setZoom(clamp(state.zoom * factor, 0.5, 3.0));
         }
       }, { passive: false });
+
+      scroll.addEventListener("dblclick", function (event) {
+        if (event.target && event.target.closest && event.target.closest(".zone, .pdf-toolbar, button, input, textarea")) return;
+        event.preventDefault();
+        toggleZoomAtPoint(scroll, event.clientX, event.clientY);
+      });
+    }
+
+    async function toggleZoomAtPoint(scroll, clientX, clientY) {
+      if (!scroll || !state.pdf) return;
+      const rect = scroll.getBoundingClientRect();
+      const target = state.zoom > 1.15 ? 1 : Math.min(2.6, Math.max(2, state.zoom * 2));
+      const ratioX = (scroll.scrollLeft + clientX - rect.left) / Math.max(1, scroll.scrollWidth);
+      const ratioY = (scroll.scrollTop + clientY - rect.top) / Math.max(1, scroll.scrollHeight);
+      await setZoom(target);
+      scroll.scrollLeft = Math.max(0, ratioX * scroll.scrollWidth - (clientX - rect.left));
+      scroll.scrollTop = Math.max(0, ratioY * scroll.scrollHeight - (clientY - rect.top));
     }
 
      function bindInkControls() {
@@ -4264,6 +4727,7 @@
        if (requestSequence < classroomSyncAppliedSequence || syncGenerationAtStart !== classroomSyncGeneration) return;
        if (!hasPendingCatalogMutation && result.catalogVersion !== undefined) state.classroomCatalogVersion = String(result.catalogVersion || "");
        classroomSyncAppliedSequence = requestSequence;
+       if (!usedLocalFallback) { state.lastSyncAt = Date.now(); updateSyncPill(); }
       const previousActiveMaterial = activeMaterial();
       let activeMaterialMissing = false;
       let activeMaterialPdfChanged = false;
@@ -4480,6 +4944,14 @@
           select.value = state.activeMaterialId || "";
           select.disabled = !state.materials.length;
         }
+        const active = activeMaterial();
+        const nameText = controls.querySelector(".material-select-text");
+        const nameLabel = controls.querySelector(".material-select-label");
+        if (nameText) nameText.textContent = active ? active.name : "尚未加入 PDF 教材";
+        if (nameLabel) {
+          const activeIndex = state.materials.findIndex(function (item) { return String(item.id) === String(active && active.id); });
+          nameLabel.title = active ? "目前教材：" + (activeIndex + 1) + "．" + active.name + "（點一下切換）" : "尚未加入 PDF 教材";
+        }
         if (addButton) addButton.disabled = state.view !== "editor";
         if (deleteButton) deleteButton.disabled = state.view !== "editor" || state.materials.length <= 1;
       });
@@ -4497,7 +4969,7 @@
       controls.dataset.materialControls = view;
       const label = document.createElement("label");
       label.className = "material-select-label";
-      label.textContent = "教材";
+      label.innerHTML = "<span class=\"material-select-icon\" aria-hidden=\"true\">▤</span><span class=\"material-select-text\">教材</span>";
       const select = document.createElement("select");
       select.className = "toolbar-button material-select";
       select.dataset.materialSelect = "1";
@@ -5450,6 +5922,7 @@
          const mask = Object.assign({}, draft, { id: createId("AM"), boardId: state.boardId, materialId: state.activeMaterialId || legacyMaterialId(state.boardId), page: state.currentPage, title: "答案遮罩 " + count, order: count });
          state.answerMasks.push(mask);
          state.answerMaskDrawing = false;
+          markEditorDirty(true);
          renderRevealMasks();
          showToast("答案遮罩已建立，點擊遮罩可修改範圍與標籤。", "success");
        });
@@ -5516,6 +5989,7 @@
        if (!ok) return;
        state.answerMasks = (state.answerMasks || []).filter(function (item) { return String(item.id) !== String(mask.id); });
        if (state.revealedAnswerMaskIds) state.revealedAnswerMaskIds.delete(String(mask.id));
+        markEditorDirty(true);
        renderRevealMasks();
        showToast("答案遮罩已刪除，請儲存版面。", "success");
      }
@@ -5561,21 +6035,71 @@
        const list = document.getElementById("areaList");
        const count = document.getElementById("areaCount");
        if (!list) return;
-       const areas = orderedAreas();
-      if (count) count.textContent = areas.length;
-      if (!areas.length) {
-        list.innerHTML = "<div class=\"area-empty\">尚未設定問答區。</div>";
-      } else {
-        list.innerHTML = areas.map(function (area, index) { return "<div class=\"area-item " + (state.selectedAreaId === area.id ? "selected" : "") + "\" data-area-item=\"" + escapeHtml(area.id) + "\"><span class=\"area-number\">" + (index + 1) + "</span><span class=\"area-item-copy\"><strong>" + escapeHtml(area.title || "問答區 " + (index + 1)) + "</strong><small>第 " + area.page + " 頁</small></span><span class=\"area-item-actions\"><button class=\"area-action-button\" data-area-edit=\"" + escapeHtml(area.id) + "\" type=\"button\" title=\"編輯圖釘\" aria-label=\"編輯圖釘\">✎</button><button class=\"area-action-button danger\" data-area-delete=\"" + escapeHtml(area.id) + "\" type=\"button\" title=\"刪除圖釘\" aria-label=\"刪除圖釘\">×</button></span></div>"; }).join("");
-        list.querySelectorAll("[data-area-item]").forEach(function (item) { item.addEventListener("click", function () { const area = state.areas.find(function (candidate) { return String(candidate.id) === String(item.dataset.areaItem); }); state.selectedAreaId = item.dataset.areaItem; renderEditorAreaList(); renderZones(); if (area && Number(area.page) !== Number(state.currentPage)) { state.currentPage = Number(area.page) || 1; renderPdfPage(); } }); });
-        list.querySelectorAll("[data-area-edit]").forEach(function (button) { button.addEventListener("click", function (event) { event.stopPropagation(); const area = state.areas.find(function (candidate) { return String(candidate.id) === String(button.dataset.areaEdit); }); if (!area) return; state.selectedAreaId = area.id; renderEditorAreaList(); renderZones(); const pageTask = Number(area.page) !== Number(state.currentPage) ? (state.currentPage = Number(area.page) || 1, renderPdfPage()) : Promise.resolve(); pageTask.then(function () { openAreaForm(area); }); }); });
-        list.querySelectorAll("[data-area-delete]").forEach(function (button) { button.addEventListener("click", function (event) { event.stopPropagation(); const area = state.areas.find(function (candidate) { return String(candidate.id) === String(button.dataset.areaDelete); }); if (area) deleteArea(area); }); });
-      }
-    }
+       const currentId = String(state.activeMaterialId || legacyMaterialId(state.boardId));
+       const areas = orderedAreas().filter(function (area) { return String(area.materialId || legacyMaterialId(state.boardId)) === currentId; });
+       if (count) count.textContent = areas.length;
+       if (!areas.length) {
+         list.innerHTML = "<div class=\"area-empty\">尚未設定問答區。</div>";
+       } else {
+         list.innerHTML = areas.map(function (area, index) {
+           const title = area.title || "問答區 " + (index + 1);
+           return "<div class=\"area-item " + (state.selectedAreaId === area.id ? "selected" : "") + "\" data-area-item=\"" + escapeHtml(area.id) + "\"><span class=\"area-number\">" + (index + 1) + "</span><span class=\"area-item-copy\" title=\"雙擊可重新命名\"><strong>" + escapeHtml(title) + "</strong><small>第 " + area.page + " 頁</small></span><span class=\"area-item-actions\"><button class=\"area-action-button\" data-area-edit=\"" + escapeHtml(area.id) + "\" type=\"button\" title=\"編輯圖釘\" aria-label=\"編輯圖釘\">✎</button><button class=\"area-action-button danger\" data-area-delete=\"" + escapeHtml(area.id) + "\" type=\"button\" title=\"刪除圖釘\" aria-label=\"刪除圖釘\">×</button></span></div>";
+         }).join("");
+         list.querySelectorAll("[data-area-item]").forEach(function (item) { item.addEventListener("click", function () { const area = state.areas.find(function (candidate) { return String(candidate.id) === String(item.dataset.areaItem); }); state.selectedAreaId = item.dataset.areaItem; renderEditorAreaList(); renderZones(); if (area && Number(area.page) !== Number(state.currentPage)) { state.currentPage = Number(area.page) || 1; renderPdfPage(); } }); });
+         list.querySelectorAll("[data-area-edit]").forEach(function (button) { button.addEventListener("click", function (event) { event.stopPropagation(); const area = state.areas.find(function (candidate) { return String(candidate.id) === String(button.dataset.areaEdit); }); if (!area) return; state.selectedAreaId = area.id; renderEditorAreaList(); renderZones(); const pageTask = Number(area.page) !== Number(state.currentPage) ? (state.currentPage = Number(area.page) || 1, renderPdfPage()) : Promise.resolve(); pageTask.then(function () { openAreaForm(area); }); }); });
+         list.querySelectorAll("[data-area-delete]").forEach(function (button) { button.addEventListener("click", function (event) { event.stopPropagation(); const area = state.areas.find(function (candidate) { return String(candidate.id) === String(button.dataset.areaDelete); }); if (area) deleteArea(area); }); });
+         list.querySelectorAll("[data-area-item]").forEach(function (item) {
+           const copy = item.querySelector(".area-item-copy");
+           if (!copy) return;
+           copy.addEventListener("dblclick", function (event) {
+             event.stopPropagation();
+             const area = state.areas.find(function (candidate) { return String(candidate.id) === String(item.dataset.areaItem); });
+             if (area) startAreaTitleEdit(item, area);
+           });
+         });
+       }
+     }
+
+     function startAreaTitleEdit(item, area) {
+       const copy = item.querySelector(".area-item-copy");
+       if (!copy || copy.querySelector(".area-title-input")) return;
+       const current = area.title || "問答區 " + areaDisplayNumber(area);
+       copy.innerHTML = "<input class=\"area-title-input\" type=\"text\" maxlength=\"80\" value=\"" + escapeHtml(current) + "\" aria-label=\"問答區名稱\">";
+       const input = copy.querySelector(".area-title-input");
+       if (!input) return;
+       input.focus();
+       input.select();
+       let settled = false;
+       const commit = function (save) {
+         if (settled) return;
+         settled = true;
+         if (save) {
+           const value = input.value.trim();
+           if (value && value !== area.title) {
+             area.title = value;
+             showToast("名稱已更新，請按「儲存版面」保存。", "info");
+             markEditorDirty(true);
+           }
+         }
+         renderEditorAreaList();
+         renderZones(true);
+       };
+       input.addEventListener("keydown", function (event) {
+         if (event.key === "Enter") { event.preventDefault(); commit(true); }
+         else if (event.key === "Escape") { event.preventDefault(); commit(false); }
+       });
+       input.addEventListener("blur", function () { commit(true); });
+     }
 
      async function handlePdfReplace(event) {
        const file = event.target.files && event.target.files[0];
       if (!file) return;
+      const materialName = (activeMaterial() || {}).name || "目前教材";
+      const areaCount = state.areas.filter(function (item) { return String(item.materialId || legacyMaterialId(state.boardId)) === String(state.activeMaterialId || legacyMaterialId(state.boardId)); }).length;
+      const maskCount = currentMaterialAnswerMasks().length;
+      const confirmed = await showModal("更換 PDF 教材", "更換後「" + materialName + "」上的 " + areaCount + " 個圖釘與 " + maskCount + " 個答案遮罩會全部清除，學生作答保留但不再對應位置。確定要更換嗎？", "confirm");
+      if (!confirmed) { event.target.value = ""; return; }
+      showToast("正在處理新 PDF，大型檔案可能需要數十秒……", "info");
       if (file.size > MAX_PDF_BYTES) { await showModal("PDF 太大", "請先壓縮 PDF 至 20 MB 以內，再重新上傳。", "error"); return; }
        try {
          state.pendingPdf = { name: file.name, mime: "application/pdf", data: await fileToDataUrl(file) };
@@ -5617,6 +6141,7 @@
          renderEditorAreaList();
          renderZones();
          showToast(state.demo ? "版面與問答區已儲存。" : "已先儲存在本機，背景同步中。", state.demo ? "success" : "warning");
+         markEditorDirty(false);
       } catch (error) {
         await showModal("儲存失敗", error.message || "請稍後再試。", "error");
       }
@@ -5658,7 +6183,7 @@
      function toggleZoneDrawing() {
        state.drawingZone = !state.drawingZone;
        const button = document.getElementById("drawZoneButton");
-      if (button) { button.classList.toggle("active", state.drawingZone); button.textContent = state.drawingZone ? "正在放置，點一下完成" : "＋ 放置圖釘"; }
+      if (button) { button.classList.toggle("active", state.drawingZone); button.textContent = state.drawingZone ? "✓ 完成放置（Esc）" : "＋ 放置圖釘"; }
       const layer = document.getElementById("zoneLayer");
       if (layer) layer.classList.toggle("is-placing", state.drawingZone);
     }
@@ -5674,13 +6199,11 @@
         const area = { id: createId("Q"), materialId: state.activeMaterialId || legacyMaterialId(state.boardId), page: state.currentPage, x: clamp((event.clientX - rect.left) / rect.width, 0, 1), y: clamp((event.clientY - rect.top) / rect.height, 0, 1), width: 0.03, height: 0.03, title: defaultTitle, autoTitle: defaultTitle, prompt: "請輸入你的答案，或拍照上傳。", order: currentAreas.length + 1 };
        state.areas.push(area);
        state.selectedAreaId = area.id;
-       state.drawingZone = false;
-       const button = document.getElementById("drawZoneButton");
-       if (button) { button.classList.remove("active"); button.textContent = "＋ 放置圖釘"; }
-       layer.classList.remove("is-placing");
        renderEditorAreaList();
        renderZones();
+       markEditorDirty(true);
        inferNearbyQuestionTitle(area);
+       showToast("已放置第 " + currentMaterialAreas().length + " 個圖釘，可繼續點擊放置；按「完成放置」或 Esc 結束。", "success");
      }
 
      async function inferNearbyQuestionTitle(area) {
@@ -5745,6 +6268,7 @@
       syncAreaOrder();
       renderEditorAreaList();
       renderZones();
+      markEditorDirty(true);
       showToast("問答圖釘已刪除；儲存版面後將一併刪除該題作答紀錄。", "success");
     }
 
@@ -5756,6 +6280,7 @@
         area.title = title;
         area.prompt = prompt;
         renderEditorAreaList();
+        markEditorDirty(true);
          renderZones();
          return true;
        });
@@ -5914,10 +6439,25 @@
       return state.areas.filter(function (area) { return String(area.materialId || legacyMaterialId(state.boardId)) === materialId; });
     }
 
+    function materialAreasInOrder(materialId) {
+      const targetId = String(materialId || state.activeMaterialId || legacyMaterialId(state.boardId));
+      return state.areas.filter(function (area) {
+        return String(area.materialId || legacyMaterialId(state.boardId)) === targetId;
+      }).sort(compareAreasByPosition);
+    }
+
+    function areaDisplayNumber(area) {
+      if (!area) return 1;
+      const list = materialAreasInOrder(area.materialId);
+      const index = list.findIndex(function (item) { return String(item.id) === String(area.id); });
+      return index > -1 ? index + 1 : (Number(area.order) || 1);
+    }
+
      function renderZones(force) {
        const layer = document.getElementById("zoneLayer");
        if (!layer) return;
-       const currentGen = zonesGeneration + "|" + state.currentPage + "|" + state.activeMaterialId + "|" + state.selectedAreaId + "|" + state.activeAreaId;
+       const answeredKey = state.view === "student" ? Array.from(state.studentSubmissions.keys()).sort().join(",") : "";
+       const currentGen = zonesGeneration + "|" + state.currentPage + "|" + state.activeMaterialId + "|" + state.selectedAreaId + "|" + state.activeAreaId + "|" + answeredKey;
        if (!force && currentGen === lastRenderedZonesGeneration) return;
        lastRenderedZonesGeneration = currentGen;
        renderRevealMasks();
@@ -5927,13 +6467,14 @@
         const zone = document.createElement("button");
         zone.type = "button";
          const isStudentActive = state.view === "student" && String(state.activeAreaId) === String(area.id);
-         zone.className = "zone" + (state.selectedAreaId === area.id ? " selected" : "") + (isStudentActive ? " active" : "");
+         const isAnswered = state.view === "student" && state.studentSubmissions.has(String(area.id));
+         zone.className = "zone" + (state.selectedAreaId === area.id ? " selected" : "") + (isStudentActive ? " active" : "") + (isAnswered ? " is-answered" : "");
         zone.dataset.areaId = area.id;
         zone.style.left = (Number(area.x) * 100) + "%";
         zone.style.top = (Number(area.y) * 100) + "%";
-        zone.title = area.title || "問答區 " + (area.order || index + 1);
+        zone.title = (area.title || "問答區 " + areaDisplayNumber(area)) + (isAnswered ? "（已作答）" : "");
         zone.setAttribute("aria-label", zone.title);
-         zone.innerHTML = "<span class=\"zone-label\">" + (area.order || index + 1) + "</span>" + (state.view === "review" ? "<span class=\"zone-response-count\" aria-hidden=\"true\">" + submissionCountForArea(area.id) + "</span>" : "");
+        zone.innerHTML = "<span class=\"zone-label\">" + areaDisplayNumber(area) + "</span>" + (isAnswered ? "<span class=\"zone-status\" aria-hidden=\"true\">✓</span>" : "") + (state.view === "review" ? "<span class=\"zone-response-count\" aria-hidden=\"true\">" + submissionCountForArea(area.id) + "</span>" : "");
         bindEditorZoneDrag(zone, area);
         zone.addEventListener("click", function (event) {
           event.stopPropagation();
@@ -5952,6 +6493,7 @@
         layer.appendChild(zone);
       });
       updatePdfToolbar();
+      updatePageZoneCount();
     }
 
     function bindEditorZoneDrag(zone, area) {
@@ -5996,6 +6538,7 @@
         zone.dataset.dragged = "1";
         syncAreaOrder();
         renderEditorAreaList();
+        markEditorDirty(true);
         showToast("圖釘位置已更新，請儲存版面。", "success");
         window.setTimeout(renderZones, 0);
       });
@@ -6032,9 +6575,10 @@
 
     function setZoom(value) {
       state.zoom = roundedZoom(value, .5, 3.0);
-      renderPdfPage();
+      const task = renderPdfPage();
       if (state.view === "student") saveStudentMaterialPosition();
       else scheduleClassroomStateSave();
+      return task;
     }
 
       async function renderStudentView(boardId, generation) {
@@ -6043,11 +6587,11 @@
        await loadBoardContext(boardId);
        if (!isCurrentRouteLoad(generation, "student", boardId)) return;
        const studentMaterialId = String(state.activeMaterialId || "");
-         main.innerHTML = "<section class=\"student-shell\"><div class=\"student-banner\"><button class=\"student-home-button\" id=\"studentHomeButton\" type=\"button\" title=\"回首頁\" aria-label=\"回首頁\">⌂</button><div class=\"student-banner-copy\"><p class=\"eyebrow\">STUDENT RESPONSE</p><h1>" + escapeHtml(state.board.name) + "</h1><p>點擊 PDF 上的問答區，拍照或輸入文字完成作答。</p></div><div class=\"student-identity\"><label for=\"studentNicknameField\">你的暱稱</label><input id=\"studentNicknameField\" maxlength=\"40\" placeholder=\"例如：第一組\" value=\"" + escapeHtml(state.nickname) + "\"></div></div><div class=\"offline-note\">目前離線，送出的答案會先保留在這台裝置，網路恢復後自動補傳。</div><div class=\"workspace-shell student-workspace\"><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentPrevPage\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"studentNextPage\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentZoomOut\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"studentZoomIn\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"studentFit\" type=\"button\">適合</button></div></div><div class=\"pdf-scroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"studentProgress\">尚未作答</span></div><div class=\"area-list\" id=\"studentAreaList\"></div><div class=\"answer-panel\" id=\"answerPanel\"><div class=\"answer-panel-empty\"><div><strong>從 PDF 選一個問答區</strong><span>你的答案會和這份教材版面分開保存。</span></div></div></div></aside></div></div></div></section>";
+         main.innerHTML = "<section class=\"student-shell\"><div class=\"student-banner\"><button class=\"student-home-button\" id=\"studentHomeButton\" type=\"button\" title=\"回首頁\" aria-label=\"回首頁\">⌂</button><div class=\"student-banner-copy\"><p class=\"eyebrow\">STUDENT RESPONSE</p><h1>" + escapeHtml(state.board.name) + "</h1><p>點擊 PDF 上的問答區，拍照或輸入文字完成作答。</p></div><div class=\"student-identity\"><label for=\"studentNicknameField\">你的暱稱</label><div class=\"student-identity-row\"><input id=\"studentNicknameField\" maxlength=\"40\" placeholder=\"例如：第一組\" value=\"" + escapeHtml(state.nickname) + "\"><button class=\"student-switch-button\" id=\"studentSwitchButton\" type=\"button\" title=\"改用另一個暱稱作答\">換人</button></div></div></div><div class=\"offline-note\">目前離線，送出的答案會先保留在這台裝置，網路恢復後自動補傳。</div><div class=\"workspace-shell student-workspace\"><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentPrevPage\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"studentNextPage\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"studentZoomOut\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"studentZoomIn\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"studentFit\" type=\"button\">適合</button></div></div><div class=\"pdf-scroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"student-drawer-handle\" id=\"studentDrawerHandle\" role=\"button\" tabindex=\"0\" aria-label=\"展開或收合作答區\"><span class=\"drawer-grip\" aria-hidden=\"true\"></span><span class=\"drawer-title\" id=\"studentDrawerTitle\">問答區與作答</span><span class=\"drawer-toggle\" id=\"studentDrawerToggle\">展開</span></div><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"studentProgress\">尚未作答</span></div><div class=\"area-list\" id=\"studentAreaList\"></div><div class=\"answer-panel\" id=\"answerPanel\"><div class=\"answer-panel-empty\"><div><strong>從 PDF 選一個問答區</strong><span>你的答案會和這份教材版面分開保存。</span></div></div></div></aside></div></div></div></section>";
          const studentSidebar = main.querySelector(".student-workspace .workspace-sidebar");
        const studentAreaList = document.getElementById("studentAreaList");
        const studentAnswerPanel = document.getElementById("answerPanel");
-       if (studentSidebar && studentAreaList && studentAnswerPanel) studentSidebar.insertBefore(studentAnswerPanel, studentAreaList);
+       bindStudentDrawer();
        movePageNavigationToBottom(main.querySelector(".student-workspace .pdf-toolbar"), main.querySelector(".student-workspace .pdf-main"), "studentPageNav");
        bindPdfSwipe(main.querySelector(".student-workspace .pdf-scroll"));
        ensureMaterialControls("student");
@@ -6077,27 +6621,107 @@
       document.getElementById("studentNextPage").addEventListener("click", function () { changePage(1); });
       document.getElementById("studentZoomOut").addEventListener("click", function () { setZoom(state.zoom - .1); });
       document.getElementById("studentZoomIn").addEventListener("click", function () { setZoom(state.zoom + .1); });
+      const switchButton = document.getElementById("studentSwitchButton");
+      if (switchButton) switchButton.addEventListener("click", switchStudentRespondent);
+    }
+
+    function studentDrawerOpen() {
+      return document.body.classList.contains("student-drawer-open");
+    }
+
+    function updateStudentDrawerLabel() {
+      const open = studentDrawerOpen();
+      const toggle = document.getElementById("studentDrawerToggle");
+      if (toggle) toggle.textContent = open ? "收起" : "展開";
+      const title = document.getElementById("studentDrawerTitle");
+      if (title) {
+        const area = state.areas.find(function (item) { return String(item.id) === String(state.activeAreaId); });
+        title.textContent = area ? (area.title || "作答中") : "問答區與作答";
+      }
+    }
+
+    function setStudentDrawer(open) {
+      if (state.view !== "student") return;
+      document.body.classList.toggle("student-drawer-open", Boolean(open));
+      updateStudentDrawerLabel();
+    }
+
+    function toggleStudentDrawer() {
+      setStudentDrawer(!studentDrawerOpen());
+    }
+
+    function bindStudentDrawer() {
+      const handle = document.getElementById("studentDrawerHandle");
+      if (handle && handle.dataset.bound !== "1") {
+        handle.dataset.bound = "1";
+        handle.addEventListener("click", toggleStudentDrawer);
+        handle.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleStudentDrawer(); }
+        });
+      }
+      updateStudentDrawerLabel();
+    }
+
+    async function switchStudentRespondent() {
+      if (state.switchingRespondent) return;
+      state.switchingRespondent = true;
+      let nickname = "";
+      try {
+        nickname = await openFormModal(
+          "更換作答者",
+          "<form><div class=\"field\"><label for=\"switchNicknameField\">新的作答者暱稱</label><input id=\"switchNicknameField\" name=\"nickname\" maxlength=\"40\" placeholder=\"例如：第二組\" required></div><p class=\"helper\">更換後會載入這個暱稱的作答紀錄，原本的答案仍保留在系統中。</p></form>",
+          "開始作答",
+          function (data) {
+            const value = String(data.get("nickname") || "").trim();
+            if (!value) throw new Error("請輸入暱稱。");
+            return value;
+          }
+        );
+      } finally {
+        state.switchingRespondent = false;
+      }
+      if (!nickname) return;
+      state.nickname = String(nickname).slice(0, 40);
+      localStorage.setItem(APP_KEY + "nickname", state.nickname);
+      state.studentSubmissions.clear();
+      state.activeAreaId = "";
+      state.pendingStudentImages = [];
+      state.activeStudentImages = [];
+      state.keepStudentImageIds = [];
+      state.keepStudentImageNames = [];
+      state.activeDraftKey = "";
+      const field = document.getElementById("studentNicknameField");
+      if (field) field.value = state.nickname;
+      const panel = document.getElementById("answerPanel");
+      if (panel) panel.innerHTML = "<div class=\"answer-panel-empty\"><div><strong>從 PDF 選一個問答區</strong><span>你的答案會和這份教材版面分開保存。</span></div></div>";
+      setStudentDrawer(false);
+      renderStudentAreaList();
+      renderZones(true);
+      await loadStudentSubmissions();
+      showToast("已更換為「" + state.nickname + "」，可以開始作答。", "success");
     }
 
      function renderStudentAreaList() {
        const list = document.getElementById("studentAreaList");
        if (!list) return;
        if (!currentMaterialAreas().length) {
-        list.innerHTML = "<div class=\"area-empty\">教師尚未設定問答區。</div>";
-        return;
-      }
-      let answered = 0;
-        const areas = studentNavigationAreas();
-       list.innerHTML = areas.map(function (area, index) {
+         list.innerHTML = "<div class=\"area-empty\">教師尚未設定問答區。</div>";
+         return;
+       }
+       let answered = 0;
+       const areas = studentNavigationAreas();
+       list.innerHTML = areas.map(function (area) {
          const submission = state.studentSubmissions.get(area.id);
          if (submission) answered += 1;
          const classCount = state.submissionCounts.has(String(area.id)) ? "，" + state.submissionCounts.get(String(area.id)) + " 組已作答" : "";
-         return "<div class=\"area-item " + (state.activeAreaId === area.id ? "selected" : "") + "\" data-student-area=\"" + escapeHtml(area.id) + "\"><span class=\"area-number\">" + (index + 1) + "</span><span class=\"area-item-copy\"><strong>" + escapeHtml(area.title || "問答區 " + (index + 1)) + "</strong><small>" + (submission ? (submission.status === "已批改" ? "教師已批改" : (submission.status === "待同步" ? "等待補傳" : "已送出")) : "尚未作答") + escapeHtml(classCount) + "</small></span><span>›</span></div>";
-      }).join("");
-      list.querySelectorAll("[data-student-area]").forEach(function (item) { item.addEventListener("click", function () { openStudentAnswerPanel(item.dataset.studentArea); }); });
-      const progress = document.getElementById("studentProgress");
+         const statusText = submission ? (submission.status === "已批改" ? "教師已批改" : (submission.status === "待同步" ? "等待補傳" : "已送出")) : "尚未作答";
+         const title = area.title || "問答區 " + areaDisplayNumber(area);
+         return "<div class=\"area-item " + (state.activeAreaId === area.id ? "selected" : "") + (submission ? " is-answered" : "") + "\" data-student-area=\"" + escapeHtml(area.id) + "\"><span class=\"area-number\">" + areaDisplayNumber(area) + "</span><span class=\"area-item-copy\"><strong title=\"" + escapeHtml(title) + "\">" + escapeHtml(title) + "</strong><small>" + escapeHtml(statusText) + escapeHtml(classCount) + "</small></span><span class=\"area-item-state" + (submission ? "" : " is-empty") + "\">" + (submission ? "✓ 已作答" : "›") + "</span></div>";
+       }).join("");
+       list.querySelectorAll("[data-student-area]").forEach(function (item) { item.addEventListener("click", function () { openStudentAnswerPanel(item.dataset.studentArea); }); });
+       const progress = document.getElementById("studentProgress");
        if (progress) progress.textContent = answered + "／" + areas.length + " 已作答";
-    }
+     }
 
     async function loadStudentSubmissions(selectionToken) {
       const boardIdAtStart = String(state.boardId || "");
@@ -6114,6 +6738,8 @@
          const rows = await mergePendingSubmissions(result.data || [], boardIdAtStart, nickname, materialIdAtStart);
          if (!isCurrent()) return;
          state.studentSubmissions = new Map(rows.map(function (item) { return [item.areaId, item]; }));
+         state.lastSyncAt = Date.now();
+         updateSyncPill();
          Promise.all(rows.map(function (item) { return localPut("submissions", item); })).catch(function () {});
         renderStudentAreaList();
         renderZones();
@@ -6148,14 +6774,8 @@
      }
 
      function studentNavigationAreas() {
-       return currentMaterialAreas().slice().sort(function (left, right) {
-         const pageDifference = (Number(left.page) || 1) - (Number(right.page) || 1);
-         if (pageDifference) return pageDifference;
-         const orderDifference = (Number(left.order) || 0) - (Number(right.order) || 0);
-         if (orderDifference) return orderDifference;
-         return String(left.id).localeCompare(String(right.id));
-       });
-     }
+        return materialAreasInOrder(state.activeMaterialId);
+      }
 
      function updateStudentQuestionNavigator() {
        const areas = studentNavigationAreas();
@@ -6192,32 +6812,34 @@
        window.setTimeout(function () { panel.classList.remove("is-focused"); }, 900);
      }
 
-      async function openStudentAnswerPanel(areaId) {
-        const area = state.areas.find(function (item) { return item.id === areaId; });
-        if (!area) return;
-        const requestSequence = ++studentAnswerPanelRequestSequence;
-        const boardIdAtStart = String(state.boardId || "");
-        const materialIdAtStart = String(state.activeMaterialId || legacyMaterialId(boardIdAtStart));
-        const areaIdAtStart = String(areaId);
-        const isCurrent = function () { return requestSequence === studentAnswerPanelRequestSequence && state.view === "student" && String(state.boardId || "") === boardIdAtStart && String(state.activeMaterialId || legacyMaterialId(boardIdAtStart)) === materialIdAtStart && String(state.activeAreaId || "") === areaIdAtStart; };
-        state.activeAreaId = areaId;
-        if (Number(area.page) !== Number(state.currentPage)) {
-          state.currentPage = Number(area.page) || 1;
-          await renderPdfPage();
-        }
-        if (!isCurrent()) return;
-        state.pendingStudentImages = [];
-        state.activeStudentImages = [];
-        state.keepStudentImageIds = [];
-        state.keepStudentImageNames = [];
-        state.activeDraftKey = studentDraftKey(state.boardId, state.activeMaterialId, areaId, state.nickname);
-        renderStudentAreaList();
-        renderZones();
-        focusAreaOnPdf(area);
-        await renderStudentAnswerPanel(requestSequence, boardIdAtStart, materialIdAtStart, areaIdAtStart);
-        if (!isCurrent()) return;
-        focusStudentAnswerPanel();
-      }
+     async function openStudentAnswerPanel(areaId) {
+       const area = state.areas.find(function (item) { return item.id === areaId; });
+       if (!area) return;
+       const requestSequence = ++studentAnswerPanelRequestSequence;
+       const boardIdAtStart = String(state.boardId || "");
+       const materialIdAtStart = String(state.activeMaterialId || legacyMaterialId(boardIdAtStart));
+       const areaIdAtStart = String(areaId);
+       const isCurrent = function () { return requestSequence === studentAnswerPanelRequestSequence && state.view === "student" && String(state.boardId || "") === boardIdAtStart && String(state.activeMaterialId || legacyMaterialId(boardIdAtStart)) === materialIdAtStart && String(state.activeAreaId || "") === areaIdAtStart; };
+       state.activeAreaId = areaId;
+       if (Number(area.page) !== Number(state.currentPage)) {
+         state.currentPage = Number(area.page) || 1;
+         await renderPdfPage();
+       }
+       if (!isCurrent()) return;
+       state.pendingStudentImages = [];
+       state.activeStudentImages = [];
+       state.keepStudentImageIds = [];
+       state.keepStudentImageNames = [];
+       state.activeDraftKey = studentDraftKey(state.boardId, state.activeMaterialId, areaId, state.nickname);
+       renderStudentAreaList();
+       renderZones();
+       focusAreaOnPdf(area);
+       await renderStudentAnswerPanel(requestSequence, boardIdAtStart, materialIdAtStart, areaIdAtStart);
+       if (!isCurrent()) return;
+       focusStudentAnswerPanel();
+       updateStudentDrawerLabel();
+       setStudentDrawer(true);
+     }
 
       async function renderStudentAnswerPanel(requestSequence, boardIdAtStart, materialIdAtStart, areaIdAtStart) {
         const requestId = requestSequence === undefined ? ++studentAnswerPanelRequestSequence : requestSequence;
@@ -6254,33 +6876,45 @@
         if (!isCurrent()) return;
         state.activeStudentImages = activeImages;
 
-       panel.innerHTML = "<div class=\"answer-panel-head\"><div><h3>" + escapeHtml(area.title) + "</h3><p>" + escapeHtml(area.prompt) + "</p></div><button class=\"close-mini\" id=\"closeAnswerPanel\" type=\"button\">×</button></div><div class=\"student-answer-navigator\" aria-label=\"問答區導覽\"><button class=\"toolbar-button\" id=\"studentPrevQuestion\" type=\"button\">‹ 上一題</button><span class=\"student-answer-position\" id=\"studentQuestionPosition\"></span><button class=\"toolbar-button\" id=\"studentNextQuestion\" type=\"button\">下一題 ›</button></div><div class=\"field\"><label for=\"studentTextAnswer\">文字答案，可選填</label><textarea id=\"studentTextAnswer\" maxlength=\"5000\" placeholder=\"把你的想法寫下來……\">" + escapeHtml(text) + "</textarea></div><div class=\"photo-drop\"><p>拍照、選取或直接把照片拖進來，最多 2 張。可點擊右上角「×」刪除。</p><label class=\"button teal small\" for=\"studentPhotoField\" id=\"studentPhotoLabel\">拍照／選取照片<input id=\"studentPhotoField\" type=\"file\" accept=\"image/*\" capture=\"environment\" multiple></label><div class=\"photo-preview-grid\" id=\"newPhotoPreview\"></div></div><div id=\"existingPhotoPreview\"></div>" + (submission && submission.teacherStrokes && (submission.teacherStrokes.strokes || Array.isArray(submission.teacherStrokes)) ? "<div class=\"feedback-box\"><strong>教師回應</strong><p>" + escapeHtml(submission.teacherComment || "教師已在答案上留下批改筆跡。") + "</p><div class=\"feedback-preview\" id=\"studentFeedbackPreview\"></div></div>" : "") + "<div class=\"answer-actions\"><button class=\"button primary\" id=\"submitStudentAnswer\" type=\"button\">" + (submission ? "更新答案" : "送出答案") + "</button></div>";
-       document.getElementById("closeAnswerPanel").addEventListener("click", function () { state.activeAreaId = ""; panel.innerHTML = "<div class=\"answer-panel-empty\"><div><strong>從 PDF 選一個問答區</strong><span>你的答案會和這份教材版面分開保存。</span></div></div>"; renderStudentAreaList(); renderZones(); });
+       panel.innerHTML = "<div class=\"answer-panel-head\"><div><h3>" + escapeHtml(area.title) + "</h3><p>" + escapeHtml(area.prompt) + "</p></div><button class=\"close-mini\" id=\"closeAnswerPanel\" type=\"button\">×</button></div><div class=\"student-answer-navigator\" aria-label=\"問答區導覽\"><button class=\"toolbar-button\" id=\"studentPrevQuestion\" type=\"button\">‹ 上一題</button><span class=\"student-answer-position\" id=\"studentQuestionPosition\"></span><button class=\"toolbar-button\" id=\"studentNextQuestion\" type=\"button\">下一題 ›</button></div><div class=\"field\"><label for=\"studentTextAnswer\">文字答案，可選填</label><textarea id=\"studentTextAnswer\" maxlength=\"5000\" placeholder=\"把你的想法寫下來……\">" + escapeHtml(text) + "</textarea><div class=\"draft-status\" id=\"studentDraftStatus\" aria-live=\"polite\"></div></div><div class=\"photo-drop\"><p id=\"studentPhotoHint\">可拍照或從相簿選取，最多 2 張，也能把照片直接拖進來。可點擊右上角「×」刪除。</p><div class=\"photo-actions\"><label class=\"button teal small\" for=\"studentCameraField\" id=\"studentCameraLabel\">拍照<input id=\"studentCameraField\" type=\"file\" accept=\"image/*\" capture=\"environment\"></label><label class=\"button subtle small\" for=\"studentAlbumField\" id=\"studentAlbumLabel\">從相簿選取<input id=\"studentAlbumField\" type=\"file\" accept=\"image/*\" multiple></label></div><div class=\"photo-preview-grid\" id=\"newPhotoPreview\"></div></div><div id=\"existingPhotoPreview\"></div>" + (submission && submission.teacherStrokes && (submission.teacherStrokes.strokes || Array.isArray(submission.teacherStrokes)) ? "<div class=\"feedback-box\"><strong>教師回應</strong><p>" + escapeHtml(submission.teacherComment || "教師已在答案上留下批改筆跡。") + "</p><div class=\"feedback-preview\" id=\"studentFeedbackPreview\"></div></div>" : "") + "<div class=\"answer-actions\"><button class=\"button primary\" id=\"submitStudentAnswer\" type=\"button\">" + (submission ? "更新答案" : "送出答案") + "</button></div>";
+       document.getElementById("closeAnswerPanel").addEventListener("click", function () { state.activeAreaId = ""; panel.innerHTML = "<div class=\"answer-panel-empty\"><div><strong>從 PDF 選一個問答區</strong><span>你的答案會和這份教材版面分開保存。</span></div></div>"; renderStudentAreaList(); renderZones(); setStudentDrawer(false); });
        document.getElementById("studentPrevQuestion").addEventListener("click", function () { moveStudentQuestion(-1); });
        document.getElementById("studentNextQuestion").addEventListener("click", function () { moveStudentQuestion(1); });
        document.getElementById("studentTextAnswer").addEventListener("input", saveStudentDraft);
-      document.getElementById("studentPhotoField").addEventListener("change", handleStudentPhotos);
-      bindDropUpload_(document.getElementById("studentPhotoField").closest(".photo-drop"), function (files) { acceptStudentPhotoFiles_(files); });
+      ["studentCameraField", "studentAlbumField"].forEach(function (id) {
+        const field = document.getElementById(id);
+        if (field) field.addEventListener("change", handleStudentPhotos);
+      });
+      bindDropUpload_(panel.querySelector(".photo-drop"), function (files) { acceptStudentPhotoFiles_(files); });
       document.getElementById("submitStudentAnswer").addEventListener("click", submitStudentAnswer);
       renderPendingPhotoPreview();
        renderExistingPhotoPreview();
        updatePhotoUploadButton();
        updateStudentQuestionNavigator();
        if (submission && submission.teacherStrokes && (submission.teacherStrokes.strokes || Array.isArray(submission.teacherStrokes))) renderStudentFeedbackPreview(submission);
+        if (draft) setDraftStatus("已載入上次草稿（" + formatTime(draft.updatedAt) + "）。");
+    }
+
+    function setDraftStatus(message, saved) {
+      const status = document.getElementById("studentDraftStatus");
+      if (!status) return;
+      status.textContent = message || "";
+      status.classList.toggle("is-saved", Boolean(saved));
     }
 
     function updatePhotoUploadButton() {
-      const label = document.getElementById("studentPhotoLabel");
-      if (!label) return;
+      const labels = [document.getElementById("studentCameraLabel"), document.getElementById("studentAlbumLabel")].filter(Boolean);
+      const hint = document.getElementById("studentPhotoHint");
       const currentCount = (state.activeStudentImages ? state.activeStudentImages.length : 0) + (state.pendingStudentImages ? state.pendingStudentImages.length : 0);
-      if (currentCount >= MAX_IMAGE_COUNT) {
-        label.style.opacity = ".5";
-        label.style.pointerEvents = "none";
-        label.childNodes[0].nodeValue = "已達照片上限 (2張)";
-      } else {
-        label.style.opacity = "1";
-        label.style.pointerEvents = "auto";
-        label.childNodes[0].nodeValue = "拍照／選取照片" + (currentCount > 0 ? " (" + currentCount + "/2)" : "");
+      const atLimit = currentCount >= MAX_IMAGE_COUNT;
+      labels.forEach(function (label) {
+        label.style.opacity = atLimit ? ".5" : "1";
+        label.style.pointerEvents = atLimit ? "none" : "auto";
+      });
+      if (hint) {
+        hint.textContent = atLimit
+          ? "已達 2 張上限，請先刪除既有照片再新增。"
+          : "可拍照或從相簿選取，最多 2 張，也能把照片直接拖進來。" + (currentCount > 0 ? "（已選 " + currentCount + "／2）" : "");
       }
     }
 
@@ -6288,6 +6922,7 @@
       const field = document.getElementById("studentTextAnswer");
       if (!field || !state.activeDraftKey) return;
       await localPut("drafts", { id: state.activeDraftKey, boardId: state.boardId, materialId: state.activeMaterialId, areaId: state.activeAreaId, nickname: state.nickname, text: field.value, images: state.pendingStudentImages, updatedAt: new Date().toISOString() });
+      setDraftStatus("草稿已儲存 " + formatClock(new Date().toISOString()) + "，送出前不會遺失。", true);
     }
 
     async function handleStudentPhotos(event) {
@@ -6623,10 +7258,10 @@
       const mount = document.createElement("div");
       mount.id = "classroomLayout";
       mount.className = "classroom-layout";
-      mount.innerHTML = "<section class=\"classroom-pdf-panel\"><div class=\"pdf-toolbar\" id=\"teacherPdfToolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"prevPageButton\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"nextPageButton\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"zoomOutButton\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"zoomInButton\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"fitButton\" type=\"button\">適合</button></div></div><div class=\"pdf-scroll\" id=\"editorPdfScroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><canvas id=\"inkCanvas\" class=\"ink-layer\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"classroom-sidebar\"><div class=\"sidebar-title\"><span>問答區圖釘</span><span class=\"meta-chip\" id=\"classroomAreaCount\">0</span></div><div class=\"area-list\" id=\"reviewAreaList\"></div><div class=\"classroom-answer-heading\"><span>本題學生作答</span><span class=\"meta-chip\" id=\"classroomReviewCount\">0 筆</span></div><div class=\"submission-items\" id=\"classroomSubmissionItems\"><div class=\"inline-message\">請先點擊 PDF 上的圖釘。</div></div></aside></div>";
+      mount.innerHTML = "<div class=\"area-drawer-backdrop\" id=\"areaDrawerBackdrop\"></div><section class=\"classroom-pdf-panel\"><div class=\"pdf-toolbar\" id=\"teacherPdfToolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"prevPageButton\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"nextPageButton\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"zoomOutButton\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"zoomInButton\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"fitButton\" type=\"button\">適合</button></div></div><div class=\"pdf-scroll\" id=\"editorPdfScroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><canvas id=\"inkCanvas\" class=\"ink-layer\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"classroom-sidebar\"><div class=\"sidebar-title\"><span>問答區圖釘</span><span class=\"meta-chip\" id=\"classroomAreaCount\">0</span></div><div class=\"area-list\" id=\"reviewAreaList\"></div><div class=\"classroom-answer-heading\"><span>本題學生作答</span><span class=\"meta-chip\" id=\"classroomReviewCount\">0 筆</span></div><div class=\"submission-items\" id=\"classroomSubmissionItems\"><div class=\"inline-message\">請先點擊 PDF 上的圖釘。</div></div></aside></div>";
       reviewGrid.parentNode.insertBefore(mount, reviewGrid);
       const classroomSidebar = mount.querySelector(".classroom-sidebar");
-      if (classroomSidebar) classroomSidebar.innerHTML = "<div class=\"sidebar-title\"><span>本頁問答圖釘</span><span class=\"meta-chip\" id=\"classroomAreaCount\">0</span></div><div class=\"area-list\" id=\"reviewAreaList\"></div><div class=\"classroom-tip\">點擊 PDF 上的圖釘，開啟本題學生作答與批改彈窗。</div>";
+      if (classroomSidebar) classroomSidebar.innerHTML = "<div class=\"classroom-drawer-head\"><div class=\"sidebar-title\"><span>問答題目</span><span class=\"meta-chip\" id=\"classroomAreaCount\">0</span></div><button class=\"classroom-drawer-close\" id=\"classroomDrawerClose\" type=\"button\" aria-label=\"收起題目清單\">×</button></div><div class=\"area-list\" id=\"reviewAreaList\"></div><div class=\"classroom-tip\">點擊題目或 PDF 上的圖釘，開啟本題學生作答與批改彈窗。</div>";
       reviewGrid.remove();
       const intro = main.querySelector(".review-shell .page-intro .lede");
       if (intro) intro.textContent = "點擊 PDF 上的圖釘查看本題答案，再直接完成批改。";
@@ -6663,9 +7298,19 @@
       return state.activeAreaId ? state.submissions.filter(function (item) { return String(item.areaId) === String(state.activeAreaId); }) : [];
     }
 
-    function moveReviewSubmission(step) {
+    function filteredReviewRows() {
       const rows = reviewRowsForActiveArea();
-      if (!rows.length) return;
+      if (state.reviewFilter === "pending") return rows.filter(function (item) { return item.status !== "已批改"; });
+      if (state.reviewFilter === "done") return rows.filter(function (item) { return item.status === "已批改"; });
+      return rows;
+    }
+
+    function moveReviewSubmission(step, pendingOnly) {
+      const rows = pendingOnly ? reviewRowsForActiveArea().filter(function (item) { return item.status !== "已批改"; }) : filteredReviewRows();
+      if (!rows.length) {
+        if (pendingOnly) showToast(state.reviewFilter === "done" ? "這個篩選下沒有可跳的作答。" : "這一題全部都批改完成了。", "info");
+        return;
+      }
       const currentIndex = state.reviewSubmission ? rows.findIndex(function (item) { return String(item.id) === String(state.reviewSubmission.id); }) : (step > 0 ? -1 : rows.length);
       const nextIndex = clamp(currentIndex + step, 0, rows.length - 1);
       selectReviewSubmission(rows[nextIndex].id);
@@ -6674,10 +7319,18 @@
     function buildReviewModalContent() {
       const content = document.getElementById("modalContent");
       if (!content) return;
-      content.innerHTML = "<div class=\"classroom-modal-layout\"><div class=\"review-navigator\" aria-label=\"學生作答切換\"><button class=\"toolbar-button\" id=\"reviewPreviousButton\" type=\"button\" aria-label=\"上一位學生\" title=\"上一位學生\">‹</button><span class=\"review-navigator-label\">學生</span><select id=\"reviewSubmissionSelect\" aria-label=\"選擇學生\"><option value=\"\">正在讀取……</option></select><span class=\"review-navigator-position\" id=\"reviewSubmissionPosition\">0／0</span><button class=\"toolbar-button\" id=\"reviewNextButton\" type=\"button\" aria-label=\"下一位學生\" title=\"下一位學生\">›</button></div><section class=\"review-panel\" id=\"reviewPanel\"><div class=\"review-empty\"><div><strong>選一位學生</strong><span>學生作答會顯示在這裡，可直接用觸控筆批改。</span></div></div></section></div>";
+      content.innerHTML = "<div class=\"classroom-modal-layout\"><div class=\"review-navigator\" aria-label=\"學生作答切換\"><button class=\"toolbar-button\" id=\"reviewPreviousButton\" type=\"button\" aria-label=\"上一位學生\" title=\"上一位學生\">‹</button><span class=\"review-navigator-label\">學生</span><select id=\"reviewSubmissionSelect\" aria-label=\"選擇學生\"><option value=\"\">正在讀取……</option></select><span class=\"review-navigator-position\" id=\"reviewSubmissionPosition\">0／0</span><button class=\"toolbar-button\" id=\"reviewNextButton\" type=\"button\" aria-label=\"下一位學生\" title=\"下一位學生\">›</button></div><div class=\"review-filter\" role=\"group\" aria-label=\"篩選學生作答\"><button class=\"photo-tab active\" data-review-filter=\"all\" type=\"button\">全部</button><button class=\"photo-tab\" data-review-filter=\"pending\" type=\"button\">待批改</button><button class=\"photo-tab\" data-review-filter=\"done\" type=\"button\">已批改</button><button class=\"toolbar-button\" id=\"reviewNextPendingButton\" type=\"button\" title=\"跳到下一位尚未批改的學生\">下一位待批改 ⇥</button></div><section class=\"review-panel\" id=\"reviewPanel\"><div class=\"review-empty\"><div><strong>選一位學生</strong><span>學生作答會顯示在這裡，可直接用觸控筆批改。</span></div></div></section></div>";
       document.getElementById("reviewPreviousButton").addEventListener("click", function () { moveReviewSubmission(-1); });
       document.getElementById("reviewNextButton").addEventListener("click", function () { moveReviewSubmission(1); });
       document.getElementById("reviewSubmissionSelect").addEventListener("change", function (event) { if (event.target.value) selectReviewSubmission(event.target.value); });
+      document.querySelectorAll("[data-review-filter]").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          state.reviewFilter = chip.dataset.reviewFilter || "all";
+          document.querySelectorAll("[data-review-filter]").forEach(function (item) { item.classList.toggle("active", item === chip); });
+          renderSubmissionList();
+        });
+      });
+      document.getElementById("reviewNextPendingButton").addEventListener("click", function () { moveReviewSubmission(1, true); });
       bindReviewModalSwipe(content.querySelector(".classroom-modal-layout"));
     }
 
@@ -6765,13 +7418,145 @@
        }
        bindTeacherInkToolbarEvents();
        bindTeacherInkCanvas();
+       slimClassroomToolbar();
+       const drawerClose = document.getElementById("classroomDrawerClose");
+       if (drawerClose) drawerClose.addEventListener("click", function () { toggleAreasDrawer(false); });
+       const drawerBackdrop = document.getElementById("areaDrawerBackdrop");
+       if (drawerBackdrop) drawerBackdrop.addEventListener("click", function () { toggleAreasDrawer(false); });
      }
+
+    function slimClassroomToolbar() {
+      const toolbar = document.getElementById("teacherPdfToolbar");
+      if (!toolbar || toolbar.dataset.slimmed === "1") return;
+      toolbar.dataset.slimmed = "1";
+      const popover = document.createElement("div");
+      popover.className = "toolbar-popover";
+      popover.id = "classroomToolbarPopover";
+      toolbar.appendChild(popover);
+      const moveToPopover = [];
+      const materialControls = toolbar.querySelector("[data-material-controls]");
+      if (materialControls) moveToPopover.push(materialControls);
+      const zoomGroup = Array.from(toolbar.querySelectorAll(".toolbar-group")).find(function (group) { return group.querySelector("#zoomOutButton"); });
+      if (zoomGroup) moveToPopover.push(zoomGroup);
+      const inkControls = document.getElementById("inkControls");
+      if (inkControls) {
+        [".ink-shape-buttons", ".ink-width-selector"].forEach(function (selector) {
+          const element = inkControls.querySelector(selector);
+          if (element) moveToPopover.push(element);
+        });
+        ["clearTeacherInkButton", "clearAllTeacherInkButton"].forEach(function (id) {
+          const element = document.getElementById(id);
+          if (element) moveToPopover.push(element);
+        });
+      }
+      moveToPopover.forEach(function (element) { popover.appendChild(element); });
+      const actions = document.createElement("div");
+      actions.className = "toolbar-group classroom-toolbar-actions";
+      const areasButton = document.createElement("button");
+      areasButton.className = "toolbar-button";
+      areasButton.id = "classroomAreasButton";
+      areasButton.type = "button";
+      areasButton.textContent = "☰ 題目";
+      areasButton.title = "開啟問答題目清單";
+      areasButton.addEventListener("click", function () { toggleAreasDrawer(); });
+      actions.appendChild(areasButton);
+      const fullscreenButton = document.createElement("button");
+      fullscreenButton.className = "toolbar-button";
+      fullscreenButton.id = "classroomFullscreenButton";
+      fullscreenButton.type = "button";
+      fullscreenButton.addEventListener("click", toggleClassroomFullscreen);
+      actions.appendChild(fullscreenButton);
+      const moreButton = document.createElement("button");
+      moreButton.className = "toolbar-button toolbar-more-button";
+      moreButton.id = "classroomMoreButton";
+      moreButton.type = "button";
+      moreButton.textContent = "⋯ 更多";
+      moreButton.title = "開啟縮放與畫筆進階設定";
+      moreButton.setAttribute("aria-expanded", "false");
+      moreButton.setAttribute("aria-controls", "classroomToolbarPopover");
+      moreButton.addEventListener("click", function (event) {
+        event.stopPropagation();
+        toggleToolbarPopover();
+      });
+      actions.appendChild(moreButton);
+      toolbar.appendChild(actions);
+      updateFullscreenButton();
+    }
+
+    function toggleToolbarPopover(force) {
+      const popover = document.getElementById("classroomToolbarPopover");
+      const moreButton = document.getElementById("classroomMoreButton");
+      if (!popover) return;
+      const open = force === undefined ? !popover.classList.contains("open") : Boolean(force);
+      popover.classList.toggle("open", open);
+      if (moreButton) {
+        moreButton.setAttribute("aria-expanded", open ? "true" : "false");
+        moreButton.classList.toggle("active", open);
+      }
+    }
+
+    function toggleAreasDrawer(force) {
+      if (state.view !== "review") return;
+      const open = force === undefined ? !document.body.classList.contains("areas-drawer-open") : Boolean(force);
+      document.body.classList.toggle("areas-drawer-open", open);
+      const button = document.getElementById("classroomAreasButton");
+      if (button) {
+        button.classList.toggle("active", open);
+        button.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+    }
+
+    function updateFullscreenButton() {
+      const button = document.getElementById("classroomFullscreenButton");
+      if (!button) return;
+      const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      button.textContent = active ? "⤡ 螢幕還原" : "⛶ 全螢幕";
+      button.title = active ? "結束全螢幕" : "以全螢幕投影";
+      button.setAttribute("aria-label", button.title);
+      button.classList.toggle("active", active);
+    }
+
+    async function toggleClassroomFullscreen() {
+      const element = document.documentElement;
+      const current = document.fullscreenElement || document.webkitFullscreenElement;
+      try {
+        if (current) {
+          if (document.exitFullscreen) await document.exitFullscreen();
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        } else if (element.requestFullscreen) {
+          await element.requestFullscreen({ navigationUI: "hide" });
+        } else if (element.webkitRequestFullscreen) {
+          element.webkitRequestFullscreen();
+        } else {
+          showToast("這個裝置或瀏覽器不支援全螢幕。", "warning");
+        }
+      } catch (error) {
+        showToast("無法切換全螢幕：" + (error.message || "請再試一次。"), "error");
+      }
+      updateFullscreenButton();
+    }
+
+    async function requestClassroomWakeLock() {
+      if (state.wakeLock || typeof navigator === "undefined" || !navigator.wakeLock || !navigator.wakeLock.request) return;
+      try {
+        state.wakeLock = await navigator.wakeLock.request("screen");
+        state.wakeLock.addEventListener("release", function () { if (state.wakeLock && state.wakeLock.released) state.wakeLock = null; });
+      } catch (error) {
+        state.wakeLock = null;
+      }
+    }
+
+    function releaseClassroomWakeLock() {
+      if (!state.wakeLock) return;
+      try { state.wakeLock.release(); } catch (error) {}
+      state.wakeLock = null;
+    }
 
     function renderReviewAreaList() {
       const list = document.getElementById("reviewAreaList");
       const count = document.getElementById("classroomAreaCount");
       if (!list) return;
-       const areas = currentMaterialAreas();
+       const areas = studentNavigationAreas();
       if (count) count.textContent = areas.length;
       if (!areas.length) {
         list.innerHTML = "<div class=\"area-empty\">教師尚未放置問答圖釘。</div>";
@@ -6785,6 +7570,7 @@
         item.addEventListener("click", function () {
           const area = state.areas.find(function (candidate) { return String(candidate.id) === String(item.dataset.reviewArea); });
           if (!area) return;
+           toggleAreasDrawer(false);
            if (Number(area.page) !== Number(state.currentPage)) {
              state.currentPage = Number(area.page) || 1;
              renderPdfPage();
@@ -6825,6 +7611,7 @@
       await loadReviewSubmissions();
       if (!isCurrentRouteLoad(generation, "review", boardId)) return;
       startClassroomPolling();
+      requestClassroomWakeLock();
      }
 
     async function loadLocalReviewSubmissions() {
@@ -6856,6 +7643,8 @@
            if (!isCurrent()) return;
            state.submissions = mergedRows;
           applyReviewSubmissionCounts(state.submissions);
+          state.lastSyncAt = Date.now();
+          updateSyncPill();
           state.reviewLoading = false;
           renderReviewAreaList();
           renderSubmissionList();
@@ -6898,7 +7687,7 @@
       const previous = document.getElementById("reviewPreviousButton");
       const next = document.getElementById("reviewNextButton");
       if (!select) return;
-      const rows = reviewRowsForActiveArea();
+      const rows = filteredReviewRows();
       const currentId = state.reviewSubmission && String(state.reviewSubmission.id);
       const currentIndex = rows.findIndex(function (item) { return String(item.id) === currentId; });
       if (state.reviewSubmission && currentIndex < 0) state.reviewSubmission = null;
@@ -6922,6 +7711,7 @@
       state.reviewImages = [];
       state.reviewPhotoIndex = 0;
       state.reviewStrokes = [];
+      state.reviewRedoStrokes = [];
       state.reviewComment = "";
       renderSubmissionList();
       await renderReviewPanel();
@@ -6951,8 +7741,9 @@
       const feedback = normalizeFeedback(submission.teacherStrokes);
       state.reviewPhotoIndex = clamp(feedback.photoIndex, 0, Math.max(0, (submission.imageFileIds || []).length - 1));
       state.reviewStrokes = JSON.parse(JSON.stringify(feedback.strokes || []));
+      state.reviewRedoStrokes = [];
       state.reviewComment = submission.teacherComment || "";
-       panel.innerHTML = "<div class=\"review-meta\"><div><p class=\"eyebrow\">" + escapeHtml(areaTitle(submission.areaId)) + "</p><h2>" + escapeHtml(submission.nickname || "未填暱稱") + "的作答</h2><p>送出於 " + escapeHtml(formatTime(submission.createdAt)) + "，最近更新於 " + escapeHtml(formatTime(submission.updatedAt)) + "</p></div><span class=\"meta-chip\">" + escapeHtml(submission.status || "待批改") + "</span></div><div class=\"review-toolbar\"><label>筆色 <input type=\"color\" id=\"reviewColorField\" value=\"" + escapeHtml(state.reviewColor) + "\"></label><label>粗細 <span class=\"review-width-selector\"><button class=\"review-width-btn\" data-review-width=\"2\" type=\"button\">2</button><button class=\"review-width-btn active\" data-review-width=\"4\" type=\"button\">4</button><button class=\"review-width-btn\" data-review-width=\"6\" type=\"button\">6</button><button class=\"review-width-btn\" data-review-width=\"8\" type=\"button\">8</button></span></label><div class=\"toolbar-group review-zoom-group\"><button class=\"toolbar-button\" id=\"reviewZoomOutButton\" type=\"button\" title=\"縮小\">−</button><span class=\"toolbar-label\" id=\"reviewZoomLabel\">100％</span><button class=\"toolbar-button\" id=\"reviewZoomInButton\" type=\"button\" title=\"放大\">＋</button><button class=\"toolbar-button\" id=\"reviewZoomFitButton\" type=\"button\" title=\"原始大小\">適合</button></div><button class=\"button small subtle\" id=\"undoStrokeButton\" type=\"button\">復原一筆</button><button class=\"button small danger\" id=\"clearStrokesButton\" type=\"button\">清除筆跡</button></div><div class=\"photo-tabs\" id=\"reviewPhotoTabs\"></div><div class=\"review-image-stage\" id=\"reviewImageStage\"><div class=\"inline-message\">正在載入答案照片……</div></div><div class=\"review-text-answer\"><strong>文字答案</strong><br>" + escapeHtml(submission.text || "學生沒有另外輸入文字。") + "</div><div class=\"review-bottom\"><div><label for=\"teacherCommentField\" class=\"helper\">教師評語</label><textarea id=\"teacherCommentField\" maxlength=\"1000\" placeholder=\"寫下給學生的提醒或回饋……\">" + escapeHtml(state.reviewComment) + "</textarea></div><div class=\"review-bottom-actions\"><button class=\"button small danger\" id=\"deleteSubmissionButton\" type=\"button\">刪除此作答</button><button class=\"button small\" id=\"exportCurrentButton\" type=\"button\">下載批改圖</button><button class=\"button primary small\" id=\"saveFeedbackButton\" type=\"button\">儲存教師批改</button></div></div>";
+       panel.innerHTML = "<div class=\"review-meta\"><div><p class=\"eyebrow\">" + escapeHtml(areaTitle(submission.areaId)) + "</p><h2>" + escapeHtml(submission.nickname || "未填暱稱") + "的作答</h2><p>送出於 " + escapeHtml(formatTime(submission.createdAt)) + "，最近更新於 " + escapeHtml(formatTime(submission.updatedAt)) + "</p></div><span class=\"meta-chip\">" + escapeHtml(submission.status || "待批改") + "</span></div><div class=\"review-toolbar\"><label>筆色 <input type=\"color\" id=\"reviewColorField\" value=\"" + escapeHtml(state.reviewColor) + "\"></label><label>粗細 <span class=\"review-width-selector\"><button class=\"review-width-btn\" data-review-width=\"2\" type=\"button\">2</button><button class=\"review-width-btn active\" data-review-width=\"4\" type=\"button\">4</button><button class=\"review-width-btn\" data-review-width=\"6\" type=\"button\">6</button><button class=\"review-width-btn\" data-review-width=\"8\" type=\"button\">8</button></span></label><div class=\"toolbar-group review-zoom-group\"><button class=\"toolbar-button\" id=\"reviewZoomOutButton\" type=\"button\" title=\"縮小\">−</button><span class=\"toolbar-label\" id=\"reviewZoomLabel\">100％</span><button class=\"toolbar-button\" id=\"reviewZoomInButton\" type=\"button\" title=\"放大\">＋</button><button class=\"toolbar-button\" id=\"reviewZoomFitButton\" type=\"button\" title=\"原始大小\">適合</button></div><button class=\"button small subtle\" id=\"undoStrokeButton\" type=\"button\">復原一筆</button><button class=\"button small subtle\" id=\"redoStrokeButton\" type=\"button\" disabled>重做</button><button class=\"button small danger\" id=\"clearStrokesButton\" type=\"button\">清除筆跡</button></div><div class=\"photo-tabs\" id=\"reviewPhotoTabs\"></div><div class=\"review-image-stage\" id=\"reviewImageStage\"><div class=\"inline-message\">正在載入答案照片……</div></div><div class=\"review-text-answer\"><strong>文字答案</strong><br>" + escapeHtml(submission.text || "學生沒有另外輸入文字。") + "</div><div class=\"review-bottom\"><div><div class=\"quick-comments\" id=\"quickComments\"></div><label for=\"teacherCommentField\" class=\"helper\">教師評語</label><textarea id=\"teacherCommentField\" maxlength=\"1000\" placeholder=\"寫下給學生的提醒或回饋……\">" + escapeHtml(state.reviewComment) + "</textarea></div><div class=\"review-bottom-actions\"><button class=\"button small danger\" id=\"deleteSubmissionButton\" type=\"button\">刪除此作答</button><button class=\"button small\" id=\"exportCurrentButton\" type=\"button\">下載批改圖</button><button class=\"button primary small\" id=\"saveFeedbackButton\" type=\"button\">儲存教師批改</button></div></div>";
         removeFitButtons();
         const reviewMeta = panel.querySelector(".review-meta");
        if (reviewMeta) reviewMeta.remove();
@@ -6971,7 +7762,10 @@
       });
       document.getElementById("reviewZoomOutButton").addEventListener("click", function () { setReviewZoom((state.reviewZoom || 1) - 0.2); });
       document.getElementById("reviewZoomInButton").addEventListener("click", function () { setReviewZoom((state.reviewZoom || 1) + 0.2); });
-      document.getElementById("undoStrokeButton").addEventListener("click", function () { state.reviewStrokes.pop(); drawReviewCanvas(); });
+            document.getElementById("undoStrokeButton").addEventListener("click", undoReviewStroke);
+            document.getElementById("redoStrokeButton").addEventListener("click", redoReviewStroke);
+            renderQuickComments();
+            updateReviewHistoryButtons();
       document.getElementById("clearStrokesButton").addEventListener("click", clearReviewStrokes);
       document.getElementById("deleteSubmissionButton").addEventListener("click", deleteReviewSubmission);
       document.getElementById("teacherCommentField").addEventListener("input", function (event) { state.reviewComment = event.target.value; });
@@ -7053,7 +7847,7 @@
         try { return await fetchFileData(id, state.boardId, state.activeMaterialId); } catch (error) { return ""; }
       }));
       tabs.innerHTML = state.reviewImages.map(function (_, index) { return "<button class=\"photo-tab " + (index === state.reviewPhotoIndex ? "active" : "") + "\" data-photo-index=\"" + index + "\" type=\"button\">照片 " + (index + 1) + "</button>"; }).join("");
-      tabs.querySelectorAll("[data-photo-index]").forEach(function (button) { button.addEventListener("click", function () { state.reviewPhotoIndex = Number(button.dataset.photoIndex); const feedback = normalizeFeedback(state.reviewSubmission.teacherStrokes); state.reviewStrokes = state.reviewPhotoIndex === feedback.photoIndex ? JSON.parse(JSON.stringify(feedback.strokes || [])) : []; state.reviewZoom = 1; loadReviewImages(); }); });
+      tabs.querySelectorAll("[data-photo-index]").forEach(function (button) { button.addEventListener("click", function () { state.reviewPhotoIndex = Number(button.dataset.photoIndex); const feedback = normalizeFeedback(state.reviewSubmission.teacherStrokes); state.reviewStrokes = state.reviewPhotoIndex === feedback.photoIndex ? JSON.parse(JSON.stringify(feedback.strokes || [])) : []; state.reviewRedoStrokes = []; state.reviewZoom = 1; loadReviewImages(); updateReviewHistoryButtons(); }); });
       const dataUrl = state.reviewImages[state.reviewPhotoIndex];
       if (!dataUrl) { stage.innerHTML = "<div class=\"inline-message\">照片讀取失敗，請稍後重試。</div>"; return; }
       stage.innerHTML = "<div class=\"review-image-wrap\"><img id=\"reviewImage\" src=\"" + dataUrl + "\" alt=\"學生答案照片\"><canvas id=\"reviewCanvas\"></canvas></div>";
@@ -7437,7 +8231,9 @@
       if (!reviewActiveStroke) return;
       state.reviewStrokes.push(reviewActiveStroke);
       reviewActiveStroke = null;
+      state.reviewRedoStrokes = [];
       drawReviewCanvas();
+      updateReviewHistoryButtons();
     }
 
     function cancelReviewStroke(event) {
@@ -7468,8 +8264,10 @@
       const kept = eraseStrokesAtPoint(state.reviewStrokes, point);
       if (kept.length !== state.reviewStrokes.length) {
         state.reviewStrokes = kept;
+        state.reviewRedoStrokes = [];
         reviewInkChanged = true;
         drawReviewCanvas();
+        updateReviewHistoryButtons();
       }
     }
 
@@ -7479,7 +8277,9 @@
       reviewActiveStroke = null;
       reviewActivePointerId = null;
       state.reviewStrokes = [];
+      state.reviewRedoStrokes = [];
       drawReviewCanvas();
+      updateReviewHistoryButtons();
     }
 
     async function clearAllReviewStrokes() {
@@ -7488,7 +8288,9 @@
       reviewActiveStroke = null;
       reviewActivePointerId = null;
       state.reviewStrokes = [];
+      state.reviewRedoStrokes = [];
       drawReviewCanvas();
+      updateReviewHistoryButtons();
     }
 
     async function deleteReviewSubmission() {
@@ -7518,6 +8320,104 @@
       } catch (error) {
         await showModal("刪除作答失敗", error.message || "請稍後再試。", "error");
       }
+    }
+
+    function undoReviewStroke() {
+      if (!state.reviewStrokes.length) return;
+      state.reviewRedoStrokes.push(state.reviewStrokes.pop());
+      drawReviewCanvas();
+      updateReviewHistoryButtons();
+    }
+
+    function redoReviewStroke() {
+      if (!state.reviewRedoStrokes.length) return;
+      state.reviewStrokes.push(state.reviewRedoStrokes.pop());
+      drawReviewCanvas();
+      updateReviewHistoryButtons();
+    }
+
+    function updateReviewHistoryButtons() {
+      const undo = document.getElementById("undoStrokeButton");
+      const redo = document.getElementById("redoStrokeButton");
+      if (undo) undo.disabled = !state.reviewStrokes.length;
+      if (redo) redo.disabled = !state.reviewRedoStrokes.length;
+    }
+
+    function quickCommentsStore() {
+      try {
+        const list = JSON.parse(localStorage.getItem(APP_KEY + "quick_comments") || "[]");
+        return Array.isArray(list) ? list.filter(function (item) { return typeof item === "string" && item.trim(); }) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveQuickComments(list) {
+      try { localStorage.setItem(APP_KEY + "quick_comments", JSON.stringify(list.slice(0, 12))); } catch (error) {}
+    }
+
+    function renderQuickComments() {
+      const box = document.getElementById("quickComments");
+      if (!box) return;
+      const custom = quickCommentsStore();
+      const chips = DEFAULT_QUICK_COMMENTS.map(function (item) {
+        return "<button class=\"quick-comment\" type=\"button\" data-comment-text=\"" + escapeHtml(item) + "\">" + escapeHtml(item) + "</button>";
+      });
+      custom.forEach(function (item, index) {
+        chips.push("<button class=\"quick-comment\" type=\"button\" data-custom=\"" + index + "\" data-comment-text=\"" + escapeHtml(item) + "\" title=\"點一下插入；按右鍵刪除\">" + escapeHtml(item) + "<span class=\"quick-comment-remove\" aria-hidden=\"true\">×</span></button>");
+      });
+      chips.push("<button class=\"quick-comment-add\" id=\"quickCommentAdd\" type=\"button\" title=\"把目前評語存為常用\">✚ 存為常用</button>");
+      box.innerHTML = chips.join("");
+      box.querySelectorAll("[data-comment-text]").forEach(function (chip) {
+        chip.addEventListener("click", function (event) {
+          if (event.target.closest && event.target.closest(".quick-comment-remove")) { deleteQuickComment(Number(chip.dataset.custom)); return; }
+          appendQuickComment(chip.dataset.commentText);
+        });
+      });
+      box.querySelectorAll("[data-custom]").forEach(function (chip) {
+        chip.addEventListener("contextmenu", function (event) {
+          event.preventDefault();
+          deleteQuickComment(Number(chip.dataset.custom));
+        });
+      });
+      const add = document.getElementById("quickCommentAdd");
+      if (add) add.addEventListener("click", addQuickCommentFromField);
+    }
+
+    function appendQuickComment(value) {
+      const field = document.getElementById("teacherCommentField");
+      if (!field || !value) return;
+      field.value = field.value ? field.value.replace(/\s+$/, "") + "\n" + value : value;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.focus();
+    }
+
+    function addQuickCommentFromField() {
+      const field = document.getElementById("teacherCommentField");
+      const value = field ? field.value.trim() : "";
+      if (!value) {
+        showToast("先在評語欄輸入文字，再存為常用評語。", "info");
+        return;
+      }
+      const list = quickCommentsStore();
+      if (list.indexOf(value) > -1 || DEFAULT_QUICK_COMMENTS.indexOf(value) > -1) {
+        showToast("這句已經在常用評語裡了。", "info");
+        return;
+      }
+      list.unshift(value);
+      saveQuickComments(list);
+      renderQuickComments();
+      showToast("已存入常用評語。", "success");
+    }
+
+    async function deleteQuickComment(index) {
+      const list = quickCommentsStore();
+      if (!(index > -1 && index < list.length)) return;
+      const ok = await showModal("刪除常用評語", "要從常用評語移除「" + list[index] + "」嗎？", "confirm");
+      if (!ok) return;
+      list.splice(index, 1);
+      saveQuickComments(list);
+      renderQuickComments();
     }
 
     async function saveReviewFeedback() {

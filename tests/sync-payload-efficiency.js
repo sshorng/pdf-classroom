@@ -73,7 +73,7 @@ const section = (text, start, end) => text.slice(text.indexOf(start), text.index
     activeMaterial: () => materials[0], pendingInkRows: async () => [],
     teacherInkRevision: new Map([['m|2', 1]]), materialInkKey: (id, page) => id + '|' + page,
     cacheTeacherInkFromSync: async () => {}, clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
-    renderMaterialControls() {}, renderStudentAreaList() {}, renderZones() {}, renderTeacherInk() { renders++; }
+    renderMaterialControls() {}, renderStudentAreaList() {}, renderZones() {}, renderTeacherInk() { renders++; }, updateSyncPill() {}
   };
   vm.createContext(frontend);
   vm.runInContext(section(html, '     let classroomSyncInFlight', '    function scheduleClassroomStateSave('), frontend);
