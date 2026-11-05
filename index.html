@@ -2753,7 +2753,7 @@
     }
 
     // 本機示範後端：依網域分派到具名處理器，處理器只認自己那一組 action。
-    // 回傳格式必須與 Code.gs 對應 action 一致，其餘前端程式碼不需要知道現在是本機或雲端。
+    // 回傳格式必須與 worker.js 對應 action 一致，其餘前端程式碼不需要知道現在是本機或雲端。
     const LOCAL_ACTION_ROUTES = [
       { actions: ["settings", "verifyAdmin", "logoutAdmin", "sheetUrl"], handler: localStaticActions },
       { actions: ["listAnnouncements", "createAnnouncement", "updateAnnouncement", "reorderAnnouncements", "deleteAnnouncement"], handler: localAnnouncementActions },
