@@ -61,7 +61,7 @@
     button { cursor: pointer; }
     button:disabled { cursor: not-allowed; opacity: .55; }
     a { color: inherit; }
-    .app-shell { min-height: 100vh; }
+    .app-shell { min-height: 100vh; min-height: 100dvh; }
     .topbar {
       position: sticky;
       top: 0;
@@ -181,6 +181,7 @@
     .section-heading h2 { margin-bottom: 0; font-size: 20px; }
     .section-heading p { margin-bottom: 0; color: var(--muted); font-size: 13px; }
     .board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .board-grid > .empty-state { grid-column: 1 / -1; }
     .announcement-surface { margin: 30px 0 34px; padding: 22px; background: linear-gradient(135deg, #fffdf8 0%, #eef5ef 100%); border: 1px solid #dce7df; border-radius: 21px; box-shadow: var(--shadow-soft); }
     .announcement-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
     .announcement-heading .eyebrow { margin-bottom: 5px; }
@@ -230,7 +231,7 @@
     .announcement-surface-compact .announcement-list { gap: 10px; }
     .announcement-surface-compact .announcement-card { flex-basis: min(300px, calc(100% - 16px)); width: min(300px, calc(100% - 16px)); height: 220px; padding: 12px; }
     .announcement-surface-compact .announcement-link strong { font-size: 14px; }
-    .announcement-drawer { position: fixed; top: 68px; right: 14px; z-index: 80; width: min(520px, calc(100vw - 28px)); max-height: calc(100vh - 84px); overflow: auto; padding: 14px; background: rgba(255,253,248,.97); border: 1px solid rgba(225,222,212,.95); border-radius: 19px; box-shadow: 0 20px 60px rgba(23,35,30,.24); opacity: 0; pointer-events: none; transform: translateY(-10px); transition: opacity .18s ease, transform .18s ease; }
+    .announcement-drawer { position: fixed; top: 68px; right: 14px; z-index: 80; width: min(520px, calc(100vw - 28px)); max-height: calc(100vh - 84px); max-height: calc(100dvh - 84px); overflow: auto; padding: 14px; background: rgba(255,253,248,.97); border: 1px solid rgba(225,222,212,.95); border-radius: 19px; box-shadow: 0 20px 60px rgba(23,35,30,.24); opacity: 0; pointer-events: none; transform: translateY(-10px); transition: opacity .18s ease, transform .18s ease; }
     .announcement-drawer.is-open { opacity: 1; pointer-events: auto; transform: translateY(0); }
     .announcement-drawer-close { position: absolute; top: 13px; right: 13px; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px; color: var(--muted); background: rgba(255,255,255,.82); border: 1px solid var(--line); border-radius: 9px; font-size: 20px; }
     .announcement-drawer-close:hover { color: var(--danger); border-color: #e2bbb4; }
@@ -313,6 +314,7 @@
     .ink-icon-button.danger:hover { color: #fffaf4; background: var(--danger); border-color: var(--danger); }
     .ink-swatch { width: 25px; height: 25px; border: 2px solid rgba(255,255,255,.9); border-radius: 50%; box-shadow: 0 0 0 1px #cfd0c8; }
     .ink-swatch.active { box-shadow: 0 0 0 2px var(--teal); }
+    .ink-palette { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; }
     .ink-custom-color { width: 30px; height: 30px; padding: 2px; border: 1px solid #d5d5cb; border-radius: 8px; }
     .ink-width-selector, .review-width-selector { display: inline-flex; align-items: center; gap: 2px; padding: 2px; background: rgba(255,255,255,.6); border: 1px solid #d5d5cb; border-radius: 9px; }
     .ink-width-btn, .review-width-btn { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; color: var(--teal-dark); background: transparent; border: 1px solid transparent; border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s ease; }
@@ -457,7 +459,7 @@
     .classroom-toolbar-title button:hover { background: #fff; border-color: #aac6ba; }
     .classroom-toolbar-title .button-share { min-width: 40px; padding: 7px 10px; font-size: 16px; background: #f3f7f5; border-color: #b7d5c9; color: var(--teal-dark); font-weight: 700; }
     .classroom-toolbar-title .button-share:hover { background: #e6f1ec; border-color: var(--teal); }
-    .classroom-page-nav, .student-page-nav, .editor-page-nav { position: absolute; right: 0; bottom: 12px; left: 0; z-index: 11; display: flex; justify-content: center; pointer-events: none; }
+    .classroom-page-nav, .student-page-nav, .editor-page-nav { position: absolute; right: 0; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 0; z-index: 11; display: flex; justify-content: center; pointer-events: none; }
     .classroom-page-nav .toolbar-group, .student-page-nav .toolbar-group, .editor-page-nav .toolbar-group { padding: 5px 7px; background: rgba(239, 237, 230, .94); border: 1px solid rgba(213, 213, 203, .95); border-radius: 13px; box-shadow: 0 7px 20px rgba(38, 45, 41, .16); pointer-events: auto; backdrop-filter: blur(12px); }
     .student-page-nav { bottom: 12px; }
     body.classroom-mode { overflow: hidden; background: #d9d7d0; }
@@ -468,7 +470,7 @@
     body.student-mode .topbar { display: none; }
     body.classroom-mode footer { display: none; }
     body.student-mode footer { display: none; }
-    body.classroom-mode .review-shell { position: relative; display: flex; flex-direction: column; width: 100%; height: 100vh; gap: 0; }
+    body.classroom-mode .review-shell { position: relative; display: flex; flex-direction: column; width: 100%; height: 100vh; height: 100dvh; gap: 0; }
     body.classroom-mode .review-shell > .page-intro { display: none; }
     body.classroom-mode .review-shell > .offline-note { position: absolute; top: 58px; left: 14px; z-index: 12; margin: 0; }
     body.classroom-mode .classroom-layout { flex: 1; min-height: 0; height: 100%; overflow: hidden; border: 0; border-radius: 0; box-shadow: none; }
@@ -476,7 +478,7 @@
     body.editor-mode { overflow: hidden; background: #d9d7d0; }
     body.editor-mode main { width: 100%; max-width: none; min-height: 0; padding: 0; }
     body.editor-mode .topbar, body.editor-mode footer { display: none; }
-    body.editor-mode .workspace-shell { display: flex; flex-direction: column; width: 100%; height: 100vh; min-height: 0; border: 0; border-radius: 0; box-shadow: none; }
+    body.editor-mode .workspace-shell { display: flex; flex-direction: column; width: 100%; height: 100vh; height: 100dvh; min-height: 0; border: 0; border-radius: 0; box-shadow: none; }
     body.editor-mode .workspace-head { flex: 0 0 auto; min-height: 54px; padding: 7px 14px; }
     body.editor-mode .workspace-head .eyebrow, body.editor-mode .workspace-head p { display: none; }
     body.editor-mode .workspace-head h2 { margin: 0; font-size: 18px; }
@@ -484,10 +486,10 @@
     body.editor-mode .pdf-main { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; position: relative; }
     body.editor-mode .pdf-scroll { flex: 1; min-height: 0; height: auto; overflow: auto; padding-bottom: 76px; }
     body.editor-mode .workspace-sidebar { height: 100%; max-height: none; overflow-x: hidden; overflow-y: auto; }
-    body.classroom-mode .classroom-layout { height: 100vh; max-height: 100vh; min-height: 0; grid-template-columns: 1fr; border-radius: 0; border: none; }
+    body.classroom-mode .classroom-layout { height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; min-height: 0; grid-template-columns: 1fr; border-radius: 0; border: none; }
     body.classroom-mode .classroom-pdf-panel { min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-    body.classroom-mode .classroom-pdf-panel .pdf-toolbar { position: absolute; top: 0; right: 0; left: 0; z-index: 10; max-height: 116px; overflow: visible; padding: 6px 10px; background: rgba(239, 237, 230, .94); backdrop-filter: blur(14px); justify-content: flex-start; align-items: center; gap: 8px; flex-wrap: wrap; white-space: nowrap; }
-    body.classroom-mode .classroom-pdf-panel .pdf-scroll { flex: 1; height: 100%; min-height: 0; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y pinch-zoom; padding: 78px 28px 76px; }
+    body.classroom-mode .classroom-pdf-panel .pdf-toolbar { position: relative; z-index: 10; flex: 0 0 auto; padding: 6px 10px; background: rgba(239, 237, 230, .98); justify-content: flex-start; align-items: center; gap: 8px; flex-wrap: wrap; white-space: nowrap; }
+    body.classroom-mode .classroom-pdf-panel .pdf-scroll { flex: 1; height: 100%; min-height: 0; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y pinch-zoom; padding: 16px 28px calc(76px + env(safe-area-inset-bottom, 0px)); }
     body.classroom-mode .classroom-sidebar { display: flex; position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(340px, 88vw); max-height: none; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 13px 15px 17px; background: #fffdf8; border-left: 1px solid var(--line); box-shadow: -16px 0 44px rgba(23,35,30,.24); transform: translateX(105%); transition: transform .26s cubic-bezier(.2,.8,.3,1); }
     body.classroom-mode.areas-drawer-open .classroom-sidebar { transform: none; }
     .area-drawer-backdrop { position: fixed; inset: 0; z-index: 55; display: none; background: rgba(31,43,38,.34); }
@@ -505,7 +507,7 @@
     body.classroom-mode .ink-controls select { min-height: 36px; }
     body.classroom-mode .ink-controls input[type="range"] { width: 72px; }
     body.classroom-mode .classroom-toolbar-title button { min-height: 36px; }
-    body.student-mode .student-shell { position: relative; display: flex; flex-direction: column; width: 100%; height: 100vh; gap: 0; }
+    body.student-mode .student-shell { position: relative; display: flex; flex-direction: column; width: 100%; height: 100vh; height: 100dvh; gap: 0; }
     body.student-mode .student-banner { flex: 0 0 auto; align-items: center; flex-direction: row; min-height: 58px; padding: 7px 14px; border-radius: 0; }
     body.student-mode .student-home-button { width: 40px; height: 40px; margin: 0 2px 0 0; }
     body.student-mode .student-banner-copy > p { display: none; }
@@ -530,14 +532,14 @@
     .draft-status.is-saved { color: #4f7d62; font-weight: 700; }
     .photo-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .photo-actions .button { flex: 0 1 auto; }
-    .sync-pill { position: fixed; left: 14px; bottom: 14px; z-index: 900; display: none; align-items: center; gap: 7px; padding: 7px 11px; color: var(--teal-dark); background: rgba(255,253,248,.95); border: 1px solid rgba(213,213,203,.95); border-radius: 999px; box-shadow: 0 6px 18px rgba(38,45,41,.14); font-size: 11px; font-weight: 700; backdrop-filter: blur(10px); }
+    .sync-pill { position: fixed; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 900; display: none; align-items: center; gap: 7px; padding: 7px 11px; color: var(--teal-dark); background: rgba(255,253,248,.95); border: 1px solid rgba(213,213,203,.95); border-radius: 999px; box-shadow: 0 6px 18px rgba(38,45,41,.14); font-size: 11px; font-weight: 700; backdrop-filter: blur(10px); }
     body.editor-mode .sync-pill, body.classroom-mode .sync-pill, body.student-mode .sync-pill { display: inline-flex; }
     .sync-pill-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--gold); }
     .sync-pill.is-online .sync-pill-dot { background: #5c9b70; }
     .sync-pill.is-offline .sync-pill-dot { background: var(--danger); }
     .sync-pill.is-busy .sync-pill-refresh { animation: spin .9s linear infinite; }
     .sync-pill-refresh { font-size: 13px; }
-    body.student-mode .sync-pill { bottom: 74px; }
+    body.student-mode .sync-pill { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
     .review-empty { display: grid; place-items: center; min-height: 620px; padding: 30px; color: var(--muted); text-align: center; }
     .review-empty strong { display: block; margin-bottom: 7px; color: var(--teal-dark); font-size: 20px; }
     .review-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
@@ -671,7 +673,7 @@
       .modal-card { padding: 21px 17px; }
       .modal-actions .button { flex: 1; }
       .photo-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .announcement-drawer { top: 62px; right: 8px; width: calc(100vw - 16px); max-height: calc(100vh - 74px); padding: 10px; }
+      .announcement-drawer { top: 62px; right: 8px; width: calc(100vw - 16px); max-height: calc(100vh - 74px); max-height: calc(100dvh - 74px); padding: 10px; }
     }
     @media (max-width: 860px) {
       body.student-mode .student-workspace { position: relative; }
@@ -683,14 +685,19 @@
       .student-drawer-handle .drawer-title { min-width: 0; flex: 1; overflow: hidden; color: var(--teal-dark); font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
       .student-drawer-handle .drawer-toggle { flex: 0 0 auto; color: var(--muted); font-size: 12px; font-weight: 700; }
       body.student-mode .student-workspace .pdf-scroll { padding-bottom: 72px; }
-      body.student-mode .sync-pill { right: 12px; bottom: 68px; left: auto; }
+      body.student-mode .sync-pill { right: 12px; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); left: auto; }
     }
     @media (pointer: coarse) {
       .toolbar-button, .button, .photo-tab { min-height: 44px; }
       .ink-controls select { min-height: 42px; }
-      .ink-controls input[type="color"] { width: 42px; height: 42px; }
+      .ink-controls input[type="color"] { width: 44px; height: 44px; }
       .ink-controls input[type="range"] { width: 110px; height: 34px; }
       .ink-touch-mode-button { min-height: 42px; }
+      .ink-icon-button { width: 44px; height: 44px; }
+      .ink-swatch { width: 32px; height: 32px; }
+      .ink-palette { gap: 8px; }
+      .classroom-drawer-close, .close-mini { width: 44px; height: 44px; }
+      .student-drawer-handle .drawer-toggle { display: inline-flex; align-items: center; min-height: 44px; }
     }
   </style>
 </head>
@@ -6808,7 +6815,10 @@
        panel.classList.add("is-focused");
        const sidebar = document.querySelector(".student-workspace .workspace-sidebar");
        if (sidebar) {
-         const targetTop = Math.max(0, panel.offsetTop - 12);
+         // 手機抽屜有 56px 的 sticky 把手，捲動目標必須扣掉把手高度，否則面板標題會藏在把手下面。
+         const handle = sidebar.querySelector(".student-drawer-handle");
+         const handleHeight = handle && getComputedStyle(handle).display !== "none" ? handle.offsetHeight : 0;
+         const targetTop = Math.max(0, panel.offsetTop - handleHeight - 12);
          if (Math.abs(sidebar.scrollTop - targetTop) > 20) sidebar.scrollTo({ top: targetTop, behavior: "smooth" });
        }
        window.setTimeout(function () { panel.classList.remove("is-focused"); }, 900);
