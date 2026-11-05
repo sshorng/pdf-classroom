@@ -524,6 +524,7 @@
     body.student-mode .student-workspace .workspace-sidebar { height: 100%; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: auto; }
     body.student-mode .student-shell > .offline-note { position: absolute; top: 64px; left: 50%; z-index: 25; width: auto; max-width: calc(100vw - 24px); margin: 0; transform: translateX(-50%); box-shadow: 0 8px 22px rgba(38,45,41,.14); }
     .student-drawer-handle { display: none; }
+    .editor-drawer-handle { display: none; }
     .student-identity-row { display: flex; align-items: center; gap: 7px; }
     .student-identity-row input { min-width: 0; flex: 1; }
     .student-switch-button { flex: 0 0 auto; min-height: 40px; padding: 0 10px; color: #f7fff9; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.38); border-radius: 9px; font-size: 12px; font-weight: 800; white-space: nowrap; }
@@ -583,6 +584,7 @@
     .page-zone-count { color: var(--muted); font-size: 12px; white-space: nowrap; }
     .announcement-collapse-button { display: grid; place-items: center; width: 34px; height: 34px; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 9px; font-size: 13px; }
     .announcement-collapse-button:hover { color: var(--teal-dark); border-color: var(--teal); }
+    .announcement-collapse-button.is-labeled { display: inline-flex; align-items: center; width: auto; min-height: 34px; padding: 0 11px; font-size: 12px; font-weight: 700; white-space: nowrap; }
     .announcement-surface.is-collapsed .announcement-list { display: none; }
 
     .loading { display: grid; place-items: center; min-height: 340px; color: var(--muted); }
@@ -597,6 +599,16 @@
     .modal-overlay.show { display: flex; animation: fadeIn .2s ease; }
     .modal-card { position: relative; width: min(520px, 94vw); max-height: min(86vh, 780px); overflow: auto; padding: 24px; background: var(--paper); border: 1px solid rgba(255,255,255,.65); border-radius: 20px; box-shadow: 0 24px 80px rgba(23, 35, 30, .24); animation: popIn .2s ease; }
     .modal-card.wide { width: min(1100px, 96vw); max-height: min(94vh, 1000px); padding: 18px 20px; }
+    .modal-card.review-modal { display: flex; flex-direction: column; overflow: hidden; }
+    .modal-card.review-modal > h2, .modal-card.review-modal > .modal-message, .modal-card.review-modal > .modal-actions { flex: 0 0 auto; }
+    .modal-card.review-modal > #modalContent { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+    .modal-card.review-modal > .modal-actions { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .modal-card.review-modal .classroom-modal-layout { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+    .modal-card.review-modal .review-navigator, .modal-card.review-modal .review-filter { flex: 0 0 auto; }
+    .modal-card.review-modal .classroom-modal-layout .review-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    @media (max-height: 760px) {
+      .review-empty { min-height: 320px; }
+    }
     .modal-card h2 { margin-bottom: 5px; font-size: 22px; }
     .modal-message { margin-bottom: 18px; color: var(--muted); white-space: pre-wrap; }
     .modal-card h2:empty, .modal-message:empty { display: none; }
@@ -686,6 +698,20 @@
       .student-drawer-handle .drawer-toggle { flex: 0 0 auto; color: var(--muted); font-size: 12px; font-weight: 700; }
       body.student-mode .student-workspace .pdf-scroll { padding-bottom: 72px; }
       body.student-mode .sync-pill { right: 12px; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); left: auto; }
+      body.editor-mode .pdf-workspace { position: relative; }
+      body.editor-mode .workspace-shell .workspace-sidebar { position: absolute; top: auto; right: 0; bottom: 0; left: 0; z-index: 30; height: min(76vh, 620px); max-height: none; padding: 0 13px 14px; background: #fffdf8; border: 0; border-radius: 18px 18px 0 0; box-shadow: 0 -14px 40px rgba(23,35,30,.22); transform: translateY(calc(100% - 56px)); transition: transform .26s cubic-bezier(.2,.8,.3,1); overscroll-behavior: contain; }
+      body.editor-mode.editor-drawer-open .workspace-shell .workspace-sidebar { transform: translateY(0); }
+      body.editor-mode .editor-drawer-handle { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; height: 56px; margin: 0 -13px; padding: 0 14px; background: #fffdf8; border-bottom: 1px solid rgba(216,216,207,.7); border-radius: 18px 18px 0 0; cursor: pointer; }
+      body.editor-mode .editor-drawer-handle .drawer-grip { width: 34px; height: 4px; flex: 0 0 auto; border-radius: 999px; background: #c9cdc5; }
+      body.editor-mode .editor-drawer-handle .drawer-title { min-width: 0; flex: 1; overflow: hidden; color: var(--teal-dark); font-size: 13px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+      body.editor-mode .editor-drawer-handle .drawer-toggle { flex: 0 0 auto; color: var(--muted); font-size: 12px; font-weight: 700; }
+      body.editor-mode .workspace-shell .pdf-scroll { padding-bottom: 72px; }
+    }
+    @media (max-width: 600px) {
+      body.student-mode .student-banner { flex-wrap: wrap; row-gap: 7px; }
+      body.student-mode .student-banner-copy { flex: 1 1 calc(100% - 52px); }
+      body.student-mode .student-identity { flex: 1 1 100%; min-width: 0; padding: 4px 0 0; background: transparent; border: 0; }
+      body.student-mode .student-identity label { color: #d9ebe2; }
     }
     @media (pointer: coarse) {
       .toolbar-button, .button, .photo-tab { min-height: 44px; }
@@ -1518,6 +1544,7 @@
       overlay.classList.remove("show");
       overlay.setAttribute("aria-hidden", "true");
       document.getElementById("modalCard").classList.remove("wide");
+      document.getElementById("modalCard").classList.remove("review-modal");
       document.getElementById("modalContent").innerHTML = "";
       document.getElementById("modalActions").innerHTML = "";
       if (resolver) resolver(value);
@@ -1528,6 +1555,7 @@
     function showModal(title, message, type = "info") {
       const overlay = document.getElementById("modalOverlay");
       modalCloseResolver = null;
+      document.getElementById("modalCard").classList.remove("review-modal");
       document.getElementById("modalTitle").textContent = title;
       document.getElementById("modalMessage").textContent = message || "";
       document.getElementById("modalContent").innerHTML = "";
@@ -1565,6 +1593,7 @@
         };
         modalCloseResolver = settle;
         card.classList.toggle("wide", Boolean(options && options.wide));
+        card.classList.remove("review-modal");
         document.getElementById("modalTitle").textContent = title;
         document.getElementById("modalMessage").textContent = "";
         document.getElementById("modalContent").innerHTML = html;
@@ -1941,12 +1970,29 @@
     // ============================================================================
     // 第 5 區｜UI VIEW：公告與下拉重整
     // ============================================================================
+    /* 公告收合狀態分桌機與手機兩套，手機首次進入預設收合，只留「查看全部」。 */
+    function announcementCollapseKey_() {
+      return APP_KEY + "announcement_collapsed" + (window.innerWidth <= 600 ? "_mobile" : "");
+    }
+
+    function announcementCollapsed_() {
+      const stored = localStorage.getItem(announcementCollapseKey_());
+      if (stored === "1") return true;
+      if (stored === "0") return false;
+      return window.innerWidth <= 600;
+    }
+
+    function announcementCollapseLabel_(collapsed) {
+      if (window.innerWidth <= 600) return collapsed ? "查看全部" : "收合";
+      return collapsed ? "▼" : "▲";
+    }
+
     function announcementSurfaceHtml(surface, canManage, compact) {
       const title = surface === "student" ? "課堂公告" : "公告與常用連結";
       const description = "";
       const manageButton = canManage ? "<button class=\"button small primary\" data-announcement-add type=\"button\">＋ 新增公告</button>" : "";
-      const collapsed = localStorage.getItem(APP_KEY + "announcement_collapsed") === "1";
-      const collapseButton = "<button class=\"announcement-collapse-button\" data-announcement-collapse type=\"button\" title=\"" + (collapsed ? "展開公告" : "收合公告") + "\" aria-expanded=\"" + (collapsed ? "false" : "true") + "\">" + (collapsed ? "▼" : "▲") + "</button>";
+      const collapsed = announcementCollapsed_();
+      const collapseButton = "<button class=\"announcement-collapse-button" + (window.innerWidth <= 600 ? " is-labeled" : "") + "\" data-announcement-collapse type=\"button\" title=\"" + (collapsed ? "展開公告" : "收合公告") + "\" aria-expanded=\"" + (collapsed ? "false" : "true") + "\">" + announcementCollapseLabel_(collapsed) + "</button>";
       return "<section class=\"announcement-surface" + (compact ? " announcement-surface-compact" : "") + (collapsed ? " is-collapsed" : "") + "\" data-announcement-surface=\"" + surface + "\"><div class=\"announcement-heading\"><div><p class=\"eyebrow\">CLASSROOM LINKS</p><h2>" + title + "</h2>" + description + "</div><div class=\"announcement-heading-actions\">" + collapseButton + manageButton + "</div></div><div class=\"announcement-list\" id=\"announcementList-" + surface + "\"><div class=\"inline-message\">正在讀取公告……</div></div></section>";
     }
 
@@ -2009,18 +2055,18 @@
     }
 
     function toggleAnnouncementCollapsed() {
-      const collapsed = localStorage.getItem(APP_KEY + "announcement_collapsed") === "1";
-      try { localStorage.setItem(APP_KEY + "announcement_collapsed", collapsed ? "0" : "1"); } catch (error) {}
+      const collapsed = announcementCollapsed_();
+      try { localStorage.setItem(announcementCollapseKey_(), collapsed ? "0" : "1"); } catch (error) {}
       updateAnnouncementCollapseUi();
     }
 
     function updateAnnouncementCollapseUi() {
-      const collapsed = localStorage.getItem(APP_KEY + "announcement_collapsed") === "1";
+      const collapsed = announcementCollapsed_();
       document.querySelectorAll("[data-announcement-surface]").forEach(function (root) {
         root.classList.toggle("is-collapsed", collapsed);
         const button = root.querySelector("[data-announcement-collapse]");
         if (!button) return;
-        button.textContent = collapsed ? "▼" : "▲";
+        button.textContent = announcementCollapseLabel_(collapsed);
         button.title = collapsed ? "展開公告" : "收合公告";
         button.setAttribute("aria-expanded", collapsed ? "false" : "true");
       });
@@ -3581,7 +3627,7 @@
         if (state.view === "student") {
           const position = readStudentMaterialPosition(state.activeMaterialId);
           state.currentPage = state.pdf ? clamp(Number(position.page) || 1, 1, state.pdf.numPages) : 1;
-          state.zoom = clamp(Number(position.zoom) || 1, .5, 3.0);
+          state.zoom = restoredZoom_(position.zoom);
         }
       }
       return state.board;
@@ -3723,6 +3769,7 @@
       document.body.classList.toggle("student-mode", state.view === "student" && Boolean(state.boardId));
       document.body.classList.toggle("editor-mode", state.view === "editor" && Boolean(state.boardId));
       if (state.view !== "student") document.body.classList.remove("student-drawer-open");
+      if (state.view !== "editor") document.body.classList.remove("editor-drawer-open");
       if (state.view !== "review") { document.body.classList.remove("areas-drawer-open"); releaseClassroomWakeLock(); }
       updateTopbarForRoute(state.view);
       setConnectionBadge();
@@ -3886,7 +3933,7 @@
         const pendingCount = Number(board.pendingCount) || 0;
         const pendingChip = pendingCount > 0 ? "<span class=\"meta-chip\">" + pendingCount + " 筆待批改</span>" : "";
         const pendingBadge = pendingCount > 0 ? "<span class=\"pending-badge\" title=\"待批改作答數\">" + pendingCount + "</span>" : "";
-        return "<article class=\"board-card\"><div class=\"board-card-top\"><div class=\"board-mark\">" + letter + "</div><button class=\"icon-button\" data-share-board=\"" + escapeHtml(board.id) + "\" type=\"button\" title=\"分享學生 QR Code\" style=\"font-size:16px;\">📱</button></div><h3>" + escapeHtml(board.name) + "</h3><p>" + escapeHtml(board.description || "尚未寫入版面說明。") + "</p><div class=\"board-meta\"><span class=\"meta-chip\">" + escapeHtml(board.pdfFileName || "尚未上傳 PDF") + "</span>" + pendingChip + "<span class=\"meta-chip\">更新於 " + escapeHtml(formatTime(board.updatedAt)) + "</span></div><div class=\"board-actions\"><button class=\"button small teal\" data-edit-board=\"" + escapeHtml(board.id) + "\" type=\"button\">設定教材</button><button class=\"button small\" data-review-board=\"" + escapeHtml(board.id) + "\" type=\"button\">進入課堂區" + pendingBadge + "</button><button class=\"button small subtle\" data-student-board=\"" + escapeHtml(board.id) + "\" type=\"button\">學生頁</button></div></article>";
+        return "<article class=\"board-card\"><div class=\"board-card-top\"><div class=\"board-mark\">" + letter + "</div></div><h3>" + escapeHtml(board.name) + "</h3><p>" + escapeHtml(board.description || "尚未寫入版面說明。") + "</p><div class=\"board-meta\"><span class=\"meta-chip\">" + escapeHtml(board.pdfFileName || "尚未上傳 PDF") + "</span>" + pendingChip + "<span class=\"meta-chip\">更新於 " + escapeHtml(formatTime(board.updatedAt)) + "</span></div><div class=\"board-actions\"><button class=\"button small teal\" data-edit-board=\"" + escapeHtml(board.id) + "\" type=\"button\">設定教材</button><button class=\"button small\" data-review-board=\"" + escapeHtml(board.id) + "\" type=\"button\">進入課堂區" + pendingBadge + "</button></div></article>";
       }).join("");
       grid.querySelectorAll("[data-edit-board]").forEach(function (button) { button.addEventListener("click", function () { goView("editor", button.dataset.editBoard); }); });
       grid.querySelectorAll("[data-review-board]").forEach(function (button) { button.addEventListener("click", function () { goView("review", button.dataset.reviewBoard); }); });
@@ -3906,7 +3953,9 @@
         menuButton.setAttribute("aria-haspopup", "true");
         const menu = document.createElement("div");
         menu.className = "board-menu";
-        menu.innerHTML = "<button type=\"button\" data-menu-copy>⎘ 複製版面</button><button type=\"button\" data-menu-archive>🗄 封存版面</button><button type=\"button\" class=\"danger\" data-menu-delete>× 刪除版面</button>";
+        menu.innerHTML = "<button type=\"button\" data-student-board=\"" + escapeHtml(board.id) + "\">👁 預覽學生頁</button><button type=\"button\" data-share-board=\"" + escapeHtml(board.id) + "\">📱 分享 QR Code</button><button type=\"button\" data-menu-copy>⎘ 複製版面</button><button type=\"button\" data-menu-archive>🗄 封存版面</button><button type=\"button\" class=\"danger\" data-menu-delete>× 刪除版面</button>";
+        menu.querySelector("[data-student-board]").addEventListener("click", function () { closeBoardMenus(); goView("student", board.id); });
+        menu.querySelector("[data-share-board]").addEventListener("click", function () { closeBoardMenus(); openShareModal(board); });
         menu.querySelector("[data-menu-copy]").addEventListener("click", function () { closeBoardMenus(); duplicateBoardById(board.id, board); });
         menu.querySelector("[data-menu-archive]").addEventListener("click", function () { closeBoardMenus(); archiveBoardById(board.id, board); });
         menu.querySelector("[data-menu-delete]").addEventListener("click", function () { closeBoardMenus(); deleteBoardById(board.id, board); });
@@ -3997,7 +4046,7 @@
        await loadBoardContext(boardId);
        if (!isCurrentRouteLoad(generation, "editor", boardId)) return;
        state.teacherInk.clear();
-      main.innerHTML = "<section class=\"workspace-shell\"><div class=\"workspace-head\"><div><p class=\"eyebrow\">TEACHER EDITOR</p><h2>設定問答區</h2><p>在 PDF 上拖曳框選學生要回答的位置。</p></div><div class=\"workspace-actions\"><span class=\"dirty-chip\" id=\"editorDirtyChip\">● 有未儲存變更</span><button class=\"button subtle small\" id=\"backManagerButton\" type=\"button\">返回版面總覽</button><button class=\"button primary small\" id=\"saveBoardButton\" type=\"button\">儲存版面</button></div></div><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"prevPageButton\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"nextPageButton\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"zoomOutButton\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"zoomInButton\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"fitButton\" type=\"button\">適合</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"drawZoneButton\" type=\"button\">＋ 問答區</button></div></div><div class=\"pdf-scroll\" id=\"editorPdfScroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"sidebar-section\"><div class=\"sidebar-title\">教材資料</div><div class=\"field\"><label for=\"editorNameField\">版面名稱</label><input id=\"editorNameField\" maxlength=\"80\" value=\"" + escapeHtml(state.board.name) + "\"></div><div class=\"field\"><label for=\"editorDescriptionField\">版面說明</label><textarea id=\"editorDescriptionField\" maxlength=\"300\">" + escapeHtml(state.board.description || "") + "</textarea></div><label class=\"button full subtle\" for=\"replacePdfField\">↥ 更換 PDF<input id=\"replacePdfField\" type=\"file\" accept=\"application/pdf,.pdf\"></label><p class=\"helper\">" + escapeHtml(state.board.pdfFileName || "尚未上傳 PDF") + "</p></div><div class=\"sidebar-section\"><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"areaCount\">0</span></div><div class=\"area-list\" id=\"areaList\"></div><p class=\"helper\">按「＋ 問答區」後，在 PDF 上拖曳框出區域。</p></div><div class=\"sidebar-section\"><button class=\"button full subtle\" id=\"shareEditorButton\" type=\"button\">分享學生作答連結</button><button class=\"button full danger\" id=\"archiveBoardButton\" type=\"button\" style=\"margin-top:8px;\">封存這個版面</button></div></aside></div></section>";
+      main.innerHTML = "<section class=\"workspace-shell\"><div class=\"workspace-head\"><div><p class=\"eyebrow\">TEACHER EDITOR</p><h2>設定問答區</h2><p>在 PDF 上拖曳框選學生要回答的位置。</p></div><div class=\"workspace-actions\"><span class=\"dirty-chip\" id=\"editorDirtyChip\">● 有未儲存變更</span><button class=\"button subtle small\" id=\"backManagerButton\" type=\"button\">返回版面總覽</button><button class=\"button primary small\" id=\"saveBoardButton\" type=\"button\">儲存版面</button></div></div><div class=\"pdf-workspace\"><section class=\"pdf-main\"><div class=\"pdf-toolbar\"><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"prevPageButton\" type=\"button\">‹</button><span class=\"toolbar-label\" id=\"pageLabel\">第 1 頁</span><button class=\"toolbar-button\" id=\"nextPageButton\" type=\"button\">›</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"zoomOutButton\" type=\"button\">−</button><span class=\"toolbar-label\" id=\"zoomLabel\">100％</span><button class=\"toolbar-button\" id=\"zoomInButton\" type=\"button\">＋</button><button class=\"toolbar-button\" id=\"fitButton\" type=\"button\">適合</button></div><div class=\"toolbar-group\"><button class=\"toolbar-button\" id=\"drawZoneButton\" type=\"button\">＋ 問答區</button></div></div><div class=\"pdf-scroll\" id=\"editorPdfScroll\"><div class=\"page-stage\" id=\"pageStage\"><canvas id=\"pdfCanvas\"></canvas><div class=\"zone-layer\" id=\"zoneLayer\"></div></div></div></section><aside class=\"workspace-sidebar\"><div class=\"editor-drawer-handle\" id=\"editorDrawerHandle\" role=\"button\" tabindex=\"0\" aria-label=\"展開或收合教材設定\"><span class=\"drawer-grip\" aria-hidden=\"true\"></span><span class=\"drawer-title\">教材設定與問答區</span><span class=\"drawer-toggle\" id=\"editorDrawerToggle\">展開</span></div><div class=\"sidebar-section\"><div class=\"sidebar-title\">教材資料</div><div class=\"field\"><label for=\"editorNameField\">版面名稱</label><input id=\"editorNameField\" maxlength=\"80\" value=\"" + escapeHtml(state.board.name) + "\"></div><div class=\"field\"><label for=\"editorDescriptionField\">版面說明</label><textarea id=\"editorDescriptionField\" maxlength=\"300\">" + escapeHtml(state.board.description || "") + "</textarea></div><label class=\"button full subtle\" for=\"replacePdfField\">↥ 更換 PDF<input id=\"replacePdfField\" type=\"file\" accept=\"application/pdf,.pdf\"></label><p class=\"helper\">" + escapeHtml(state.board.pdfFileName || "尚未上傳 PDF") + "</p></div><div class=\"sidebar-section\"><div class=\"sidebar-title\"><span>問答區</span><span class=\"meta-chip\" id=\"areaCount\">0</span></div><div class=\"area-list\" id=\"areaList\"></div><p class=\"helper\">按「＋ 問答區」後，在 PDF 上拖曳框出區域。</p></div><div class=\"sidebar-section\"><button class=\"button full subtle\" id=\"shareEditorButton\" type=\"button\">分享學生作答連結</button><button class=\"button full danger\" id=\"archiveBoardButton\" type=\"button\" style=\"margin-top:8px;\">封存這個版面</button></div></aside></div></section>";
        bindEditorEvents();
        renderEditorAreaList();
        await renderPdfPage();
@@ -4008,11 +4057,31 @@
     // 第 9 區｜UI VIEW：編輯頁工具與 PDF 手勢
     // 手勢只處理瀏覽器事件，不放業務計算。
     // ============================================================================
+    function bindEditorDrawer() {
+      const handle = document.getElementById("editorDrawerHandle");
+      if (!handle || handle.dataset.drawerBound === "1") return;
+      handle.dataset.drawerBound = "1";
+      const toggle = function () {
+        const open = document.body.classList.toggle("editor-drawer-open");
+        const label = document.getElementById("editorDrawerToggle");
+        if (label) label.textContent = open ? "收起" : "展開";
+        handle.setAttribute("aria-expanded", open ? "true" : "false");
+      };
+      handle.addEventListener("click", toggle);
+      handle.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggle();
+        }
+      });
+    }
+
      function bindEditorEvents() {
         setupTeacherPdfWorkspace(false);
         ensureMaterialControls("editor");
         ensureAnswerMaskControls("editor");
         ensureAnswerMaskEditorPanel();
+        bindEditorDrawer();
        document.getElementById("backManagerButton").addEventListener("click", function () { goView("manager"); });
       document.getElementById("saveBoardButton").addEventListener("click", saveEditorBoard);
       document.getElementById("prevPageButton").addEventListener("click", function () { changePage(-1); });
@@ -5030,7 +5099,7 @@
       else if (viewAtStart === "student") {
         const position = readStudentMaterialPosition(targetMaterialId);
         state.currentPage = Number(position.page) || 1;
-        state.zoom = clamp(Number(position.zoom) || 1, .5, 3.0);
+        state.zoom = restoredZoom_(position.zoom);
       } else {
         state.currentPage = 1;
         state.zoom = 1;
@@ -5038,7 +5107,7 @@
       await loadMaterialPdf(targetMaterialId);
       if (!isCurrentMaterialContext(state.boardId, targetMaterialId, viewAtStart, selectionToken)) return false;
       if (state.pdf) state.currentPage = clamp(Number(state.currentPage) || 1, 1, state.pdf.numPages);
-      if (settings.zoom !== undefined) state.zoom = clamp(Number(settings.zoom) || 1, .5, 3.0);
+      if (settings.zoom !== undefined) state.zoom = restoredZoom_(settings.zoom);
       const backgroundTasks = [];
       if (viewAtStart === "student") await loadCachedTeacherInk(targetMaterialId, selectionToken);
       if (viewAtStart === "editor" || viewAtStart === "review") {
@@ -6582,6 +6651,12 @@
       else scheduleClassroomStateSave();
     }
 
+    /* 窄螢幕沿用舊的放大倍率會讓講義一開就超出畫面，還原位置時一律收斂回適合寬度。 */
+    function restoredZoom_(value) {
+      const zoom = clamp(Number(value) || 1, .5, 3.0);
+      return window.innerWidth < 768 ? Math.min(zoom, 1) : zoom;
+    }
+
     function setZoom(value) {
       state.zoom = roundedZoom(value, .5, 3.0);
       const task = renderPdfPage();
@@ -7388,6 +7463,7 @@
       const overlay = document.getElementById("modalOverlay");
       const card = document.getElementById("modalCard");
       card.classList.add("wide");
+      card.classList.add("review-modal");
       document.getElementById("modalTitle").textContent = (area.title || "問答區") + "，學生作答";
       document.getElementById("modalMessage").textContent = "";
       buildReviewModalContent();
