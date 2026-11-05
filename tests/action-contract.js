@@ -8,10 +8,10 @@ const assert = (condition, message) => {
 function runTest() {
   const baseDir = path.join(__dirname, "..");
   const htmlPath = path.join(baseDir, "index.html");
-  const gsPath = path.join(baseDir, "Code.gs");
+  const workerPath = path.join(baseDir, "worker.js");
   
   const htmlContent = fs.readFileSync(htmlPath, "utf-8");
-  const gsContent = fs.readFileSync(gsPath, "utf-8");
+  const workerContent = fs.readFileSync(workerPath, "utf-8");
   
   // Extract actions from frontend
   const gasGetRegex = /gasGet\s*\(\s*['"]([^'"]+)['"]/g;
@@ -31,9 +31,9 @@ function runTest() {
   const frontendPost = extractMatches(gasPostRegex, htmlContent);
   const localOnly = extractMatches(localRequestRegex, htmlContent);
   
-  // Extract actions from backend Code.gs
+  // Extract actions from backend worker.js
   const getFunctionBody = (funcName, content) => {
-    const regex = new RegExp(`function\\s+${funcName}\\s*\\([^)]*\\)\\s*{`);
+    const regex = new RegExp(`(?:async\\s+)?function\\s+${funcName}\\s*\\([^)]*\\)\\s*{`);
     const match = regex.exec(content);
     if (!match) return "";
     let braceCount = 1;
@@ -47,8 +47,8 @@ function runTest() {
     return content.substring(bodyStart, i - 1);
   };
   
-  const dogetBody = getFunctionBody("doGet", gsContent);
-  const doPostBody = getFunctionBody("doPost", gsContent);
+  const dogetBody = getFunctionBody("doGet", workerContent);
+  const doPostBody = getFunctionBody("doPost", workerContent);
   
   const actionRegex = /action\s*===\s*['"]([^'"]+)['"]/g;
   

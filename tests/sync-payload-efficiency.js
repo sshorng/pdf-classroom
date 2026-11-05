@@ -2,58 +2,14 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const crypto = require('node:crypto');
 const baseline = process.argv.includes('--baseline');
 const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-const gas = fs.readFileSync(path.join(__dirname, '../Code.gs'), 'utf8');
 const section = (text, start, end) => text.slice(text.indexOf(start), text.indexOf(end, text.indexOf(start)));
 
 (async () => {
+  let clones = 0;
   const board = { id: 'b', updatedAt: 'v1' };
   const materials = [{ id: 'm', pdfFileId: 'pdf', updatedAt: 'v1' }];
-  const areas = Array.from({ length: 100 }, (_, i) => ({ id: 'a' + i, updatedAt: 'v1', title: 'Question '.repeat(40) }));
-  let masks = [{ id: 'mask', updatedAt: 'v1', materialId: 'm', page: 1, x: .1, y: .1, width: .2, height: .2 }];
-  const shared = { boardId: 'b', materialId: 'm', page: 1, zoom: 1, updatedAt: 'v1' };
-  const backend = {
-    Utilities: { DigestAlgorithm: { MD5: 'md5' }, computeDigest: (_, raw) => crypto.createHash('md5').update(raw).digest(), base64EncodeWebSafe: bytes => bytes.toString('base64url') }
-  };
-  vm.createContext(backend);
-  vm.runInContext(gas, backend);
-  Object.assign(backend, {
-    getBoard_: () => board, materialsForBoard_: () => materials, areasForBoard_: () => areas,
-    answerMasksForBoard_: () => masks, publicClassroomState_: () => shared,
-    readTable_: name => name === 'ink' ? [{ id: 'ink', boardId: 'b', materialId: 'm', page: 1, updatedAt: 'v2', strokes: [] }] : [shared],
-    readJsonReference_: value => value, readClassroomPulseCache_: () => null,
-    writeClassroomPulseCache_: () => {}, now_: () => 'now'
-  });
-  const request = { boardId: 'b', materialId: 'm', inkPage: 1, inkDelta: '1', includeSubmissionCounts: '0' };
-  const initial = backend.classroomSync_(request);
-  const known = { ...request, catalogVersion: initial.catalogVersion, catalogDelta: '1' };
-  const delta = backend.classroomSync_(known);
-  const legacy = backend.classroomSync_({ ...known, catalogDelta: undefined });
-  const pulse = backend.classroomPulse_({ ...known, includeChanges: '1' });
-  const bytes = value => Buffer.byteLength(JSON.stringify(value));
-  console.log('MOCK payload ' + JSON.stringify({ initialBytes: bytes(initial), knownCatalogBytes: bytes(delta), legacyBytes: bytes(legacy), inkRows: delta.ink.length }));
-  assert.deepEqual(delta.ink, legacy.ink, 'Catalog elision must not change ink deltas');
-  assert.ok(Array.isArray(legacy.materials) && Array.isArray(legacy.answerMasks), 'Old clients keep the full response');
-  assert.ok(Array.isArray(backend.classroomSync_({ ...request, catalogDelta: '1' }).answerMasks), 'Initial clients must receive masks');
-  if (!baseline) {
-    assert.equal(delta.catalogChanged, false);
-    for (const field of ['materials', 'areas', 'answerMasks']) assert.equal(delta[field], null);
-    assert.equal(pulse.materials, null, 'Ink-only combined pulse must also omit the known catalog');
-    assert.deepEqual(pulse.ink, delta.ink);
-    assert.ok(bytes(delta) < bytes(legacy) / 10);
-  }
-  for (const mutation of [() => { masks[0].updatedAt = 'v2'; }, () => { masks = []; }, () => { materials[0].pdfFileId = 'pdf2'; }, () => { areas[0].updatedAt = 'v2'; }]) {
-    const before = backend.classroomSync_(request);
-    mutation();
-    const changed = backend.classroomSync_({ ...known, catalogVersion: before.catalogVersion });
-    assert.notEqual(changed.catalogVersion, before.catalogVersion);
-    assert.ok(Array.isArray(changed.materials) && Array.isArray(changed.areas) && Array.isArray(changed.answerMasks), 'Changed masks, PDF and areas must always be delivered');
-  }
-  console.log('PASS catalog: initial, legacy, unchanged, mask edit/delete, PDF replacement and area edit');
-
-  let clones = 0;
   let changedInk = false;
   let calls = 0;
   let renders = 0;

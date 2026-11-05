@@ -3,7 +3,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-const gas = fs.readFileSync(path.join(__dirname, '../Code.gs'), 'utf8');
 const section = (text, start, end) => text.slice(text.indexOf(start), text.indexOf(end, text.indexOf(start)));
 
 (async () => {
@@ -53,23 +52,6 @@ const section = (text, start, end) => text.slice(text.indexOf(start), text.index
   assert.equal(retryUrls.length, 2, 'Transient read failures must retry');
   assert.notEqual(retryUrls[0], retryUrls[1], 'Retries must not reuse a failed response URL');
   console.log('PASS transport: stalled GET/POST bodies, cancellation, no write replay, success and application errors');
-
-  let cacheReads = 0;
-  let initialized = 0;
-  let released = 0;
-  const backend = {
-    DATABASE_READY_CACHE_KEY: 'ready', TABLES: { boards: {} },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
-    CacheService: { getScriptCache: () => ({ get: () => ++cacheReads === 1 ? null : '1' }) },
-    LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => released++ }) },
-    ensureTable_: () => initialized++
-  };
-  vm.createContext(backend);
-  vm.runInContext(section(gas, 'function ensureDatabase_()', 'function ensureTable_('), backend);
-  backend.ensureDatabase_();
-  assert.equal(initialized, 0, 'A waiting request must reuse initialization completed by the previous lock holder');
-  assert.equal(released, 1);
-  console.log('PASS initialization: queued request skips repeated setup and releases lock');
 
   const note = { textContent: '', classList: { toggle(name, show) { note.visible = show; } } };
   const health = { state: {}, navigator: { onLine: true }, document: { querySelector: () => note }, setConnectionBadge() {} };

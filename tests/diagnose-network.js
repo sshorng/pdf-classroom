@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-const endpoint = process.env.PDF_GAS_URL || html.match(/const DEFAULT_GAS_URL = "([^"]+)"/)[1];
+const endpoint = process.env.PDF_WORKER_URL || html.match(/const DEFAULT_WORKER_URL = "([^"]+)"/)[1];
 const observations = [];
 async function probe(action, params = {}, method = 'GET') {
   const started = performance.now();
